@@ -10,9 +10,15 @@ numpy==1.18.4
     #   pandas
 pandas==1.3.3
     # via -r requirements.in
+plotly==5.3.1
+    # via -r requirements.in
 python-dateutil==2.8.2
     # via pandas
 pytz==2021.1
     # via pandas
 six==1.16.0
-    # via python-dateutil
+    # via
+    #   plotly
+    #   python-dateutil
+tenacity==8.0.1
+    # via plotly
