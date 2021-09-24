@@ -24,3 +24,9 @@
 
 - Do after following instructions for Setup for development
 - You can run assignment from current directory `python3 assignment1.py`
+
+# Assignment 2 Instructions
+
+1. Make sure that Baseball database is set up (not altered if altered edit out line 2 of assignment-1.sql )
+2. Sign into database `mysql -u [username] -p [baseball database]`
+3. type `source assignemnt-2.sql` (note: takes a while to run the file...)
