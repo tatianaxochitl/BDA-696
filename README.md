@@ -29,4 +29,4 @@
 
 1. Make sure that Baseball database is set up (not altered if altered edit out line 2 of assignment-1.sql )
 2. Sign into database `mysql -u [username] -p [baseball database]`
-3. type `source assignemnt-2.sql` (note: takes a while to run the file...)
+3. type `source assignement-2.sql` (note: takes a while to run the file...)
