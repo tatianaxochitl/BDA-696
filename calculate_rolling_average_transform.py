@@ -2,7 +2,7 @@ from pyspark import keyword_only
 from pyspark.ml import Transformer
 from pyspark.ml.param.shared import HasOutputCol, Param, Params
 from pyspark.ml.util import DefaultParamsReadable, DefaultParamsWritable
-from pyspark.sql.functions import datediff, max, min, round, sum
+from pyspark.sql.functions import col, round, sum, window
 from pyspark.sql.window import Window
 
 
@@ -12,22 +12,16 @@ class CalculateRollingAverage(
     DefaultParamsReadable,
     DefaultParamsWritable,
 ):
-    localDate = Param(
+    date = Param(
         Params._dummy(),
-        "localDate",
-        "localDate to fill",
+        "date",
+        "date to fill",
     )
 
     batter = Param(
         Params._dummy(),
         "batter",
         "batter to fill",
-    )
-
-    gameID = Param(
-        Params._dummy(),
-        "gameID",
-        "gameID to fill",
     )
 
     hit = Param(
@@ -54,8 +48,8 @@ class CalculateRollingAverage(
         self,
         date=None,
         batter=None,
-        hit=None,
-        atBat=None,
+        hit=0,
+        atBat=0,
         outputCol=None,
     ):
         kwargs = self._input_kwargs
@@ -99,11 +93,19 @@ class CalculateRollingAverage(
         output_col = self.getOutputCol()
 
         # do the calculations to get the rolling average
-        dates = datediff(max(date), min(date))
+        dates = window(
+            col(date).cast("timestamp"), "1 day", startTime="-100 days"
+        )  # noqa E501
 
-        d = Window.partitionBy(batter).orderBy(dates).rangeBetween(-100, 0)
+        d = (
+            Window.partitionBy(col(batter))
+            .orderBy(col(dates))
+            .rangeBetween(-100, 0)  # noqa E501
+        )
 
-        output_col = round((sum(hit).over(d) / sum(at_bat).over(d)), 3)
+        output_col = round(
+            (sum(col(hit)).over(d) / sum(col(at_bat)).over(d)), 3
+        )  # noqa E501
 
         dataset = dataset.withColumn("rolling_100_day_avg", output_col)
 

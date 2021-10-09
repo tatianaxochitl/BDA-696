@@ -20,7 +20,7 @@ def main():
     game = (
         spark.read.format("jdbc")
         .options(
-            url=f"jdbc:mysql://localhost:{port}/{database}",
+            url=f"jdbc:mysql://localhost:{port}/{database}?zeroDateTimeBehavior=CONVERT_TO_NULL",  # noqa E501
             driver="com.mysql.cj.jdbc.Driver",
             dbtable="game",
             user=username,
@@ -35,7 +35,7 @@ def main():
     batter_counts = (
         spark.read.format("jdbc")
         .options(
-            url=f"jdbc:mysql://localhost:{port}/{database}",
+            url=f"jdbc:mysql://localhost:{port}/{database}?zeroDateTimeBehavior=CONVERT_TO_NULL",  # noqa E501
             driver="com.mysql.cj.jdbc.Driver",
             dbtable="batter_counts",
             user=username,
@@ -61,8 +61,7 @@ def main():
 
     calculate_rolling_average = CalculateRollingAverage(
         batter="batter",
-        gameID="game_id",
-        localDate="local_date",
+        date="local_date",
         hit="Hit",
         atBat="atBat",
         outputCol="rolling_100_day_avg",
