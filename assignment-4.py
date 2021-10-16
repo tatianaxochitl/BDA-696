@@ -2,14 +2,23 @@ import os
 import webbrowser
 
 import numpy as np  # noqa: F401
-import pandas as pd  # noqa: F401
+import pandas as pd
 import plotly.figure_factory as ff
 import plotly.graph_objects as go
 import statsmodels.api
 from plotly import express as px
 from plotly.subplots import make_subplots
-from sklearn import datasets  # noqa: F401
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
+
+# using these to make code shorter also so i don't have to write as much
+ROW_OPEN = '<div class="div-table-row">'
+COL_OPEN = '<div class="div-table-column">'
+
+# shouldnt make this global but I will need to rework the logic later
+CONT_PRED = pd.DataFrame(
+    columns=["Predictor", "t-score", "p-score", "RFC Importance"]
+)  # noqa: E501
 
 
 def process_dataframe(pandas_df, predictor_column, response_column):
@@ -46,20 +55,20 @@ def process_dataframe(pandas_df, predictor_column, response_column):
     header = f"""<!DOCTYPE html>
     <html>
     <head>
-        <link rel="stylesheet" type="text/css" href="tyle.css">
+        <link rel="stylesheet" type="text/css" href="style.css">
         <title>{pandas_df} Analysis</title>
     </head>
     <body>
     <h1>{pandas_df} Analysis</h1>
     <h2>Predictor and Response Columns</h2>
     <div class="div-table">
-        <div class="div-table-row">
-            <div class="div-table-column">Predictor Columns</div>
-            <div class="div-table-column">{predictor_column}</div>
+        {ROW_OPEN}
+            {COL_OPEN}Predictor Columns</div>
+            {COL_OPEN}{predictor_column}</div>
         </div>
-        <div class="div-table-row">
-            <div class="div-table-column">Response Columns</div>
-            <div class="div-table-column">{response_column}</div>
+        {ROW_OPEN}
+            {COL_OPEN}Response Columns</div>
+            {COL_OPEN}{response_column}</div>
         </div>
     </div>
     """
@@ -91,55 +100,57 @@ def process_dataframe(pandas_df, predictor_column, response_column):
 
 
 def create_table(df, p_column, p_types, r_column, r_types):
-    html_div_table = """<h2>Plots</h2>
+    tbl = """<h2>Plots</h2>
     <div class="div-table">
     """
+
     for pt, pc in p_types, p_column:
-        html_div_table_row = f"""  <div class="div-table-row">
-                <div class="div-table-column">{pc}</div>
+        tbl_row = f"""  {ROW_OPEN}
+                {COL_OPEN}{pc}</div>
         """
-        graph_filename = ""
         if pt == "categorical":
-            graph_filename = cat_graph(df, pc)
-            html_div_table_column = f'      <div class="div-table-column"><a href="plots/{graph_filename}">{pc} Plot</a></div>'  # noqa: E501
-            html_div_table_row = "\n".join(
-                [html_div_table_row, html_div_table_column]
-            )  # noqa: E501
+            tbl_column = cat_graph(df, pc)
+            tbl_row = "\n".join([tbl_row, tbl_column])
             for rt, rc in r_types, r_column:
                 if rt == "boolean":
-                    graph_filename = cat_bool_graph(df, pc, rc)
-
+                    tbl_column = conf_mx(df, pc, rc)
                 elif rt == "continous":
-                    graph_filename = cat_cont_graph(df, pc, rc)
+                    tbl_column = cat_pred_cont_resp_graph(df, pc, rc)
 
                 else:
                     raise ValueError("Invalid response column type")
-            html_div_table_column = f'      <div class="div-table-column"><a href="plots/{graph_filename}">{pc} by {rc} Plot</a></div>'  # noqa: E501
-            html_div_table_row = "\n".join(
-                [html_div_table_row, html_div_table_column]
-            )  # noqa: E501
+            tbl_row = "\n".join([tbl_row, tbl_column])  # noqa: E501
         elif pt == "continuous":
+            CONT_PRED.loc[-1] = [pc, "", "", "", ""]
             for rt, rc in r_types, r_column:
                 if rt == "boolean":
-                    graph_filename = cont_bool_graph(df, pc, rc)
+                    tbl_column = logistic_regression(df, pc, rc)
 
                 elif rt == "continous":
-                    graph_filename = cont_cont_graph(df, pc, rc)
+                    tbl_column = linear_regression(df, pc, rc)
 
                 else:
                     raise ValueError("Invalid response column type")
-            html_div_table_column = f'      <div class="div-table-column"><a href="plots/{graph_filename}">{pc} vs {rc} Plot</a></div>'  # noqa: E501
-            html_div_table_row = "\n".join(
-                [html_div_table_row, html_div_table_column]
-            )  # noqa: E501
+
+            tbl_row = "\n".join([tbl_row, tbl_column])
 
         else:
             raise ValueError("Invalid predictor column type")
 
-        "\n".join([html_div_table, html_div_table_row, "    </div>"])
+        "\n".join([tbl, tbl_row, "    </div>"])
 
-    "\n".join([html_div_table, "</div>"])
-    return html_div_table
+    "\n".join([tbl, "</div>"])
+
+    # Random Forest Classifier Ranking
+    df_X = df[CONT_PRED["Predictor"]]
+    df_y = df[r_column]
+
+    clf = RandomForestClassifier(max_depth=2, random_state=0)
+    clf.fit(df_X, df_y)
+    importances = clf.feature_importances_
+    CONT_PRED["RFC Importance"] = importances.tolist()
+
+    return tbl
 
 
 # make graphs just looking at the categorical predictor
@@ -176,10 +187,12 @@ def cat_graph(pandas_df, predictor):
 
     fig.write_image(f"plots/{pandas_df}_{predictor}_cat_graph.png")
 
-    return f"{pandas_df}_{predictor}_cat_graph.png"
+    filename = f"{pandas_df}_{predictor}_cat_graph.png"
+    col = f'    {COL_OPEN}<a href="plots/{filename}">{predictor} Plots</a></div>'  # noqa: E501
+    return col
 
 
-def cat_bool_graph(pandas_df, predictor, response):
+def conf_mx(pandas_df, predictor, response):
     x = pandas_df[predictor]
     y = pandas_df[response]
 
@@ -197,14 +210,16 @@ def cat_bool_graph(pandas_df, predictor, response):
         yaxis_title=f"{response}",
     )
 
-    fig.write_image(
-        f"plots/{pandas_df}_{predictor}_{response}_confusion_matrix.png"
-    )  # noqa: E501
+    fig.write_html(
+        f"plots/{pandas_df}_{predictor}_{response}_confusion_matrix.html",
+        include_plotlyjs="cdn",
+    )
+    filename = f"{pandas_df}_{predictor}_{response}_confusion_matrix.html"
+    col = f'    {COL_OPEN}<a href="plots/{filename}">{predictor} vs {response} Confusion Matrix</a></div>'  # noqa: E501
+    return col
 
-    return f"{pandas_df}_{predictor}_{response}_confusion_matrix.png"
 
-
-def cat_cont_graph(pandas_df, predictor, response):
+def cat_pred_cont_resp_graph(pandas_df, predictor, response):
     group_labels = [pandas_df[predictor].unique()]
 
     hist_data = []
@@ -214,26 +229,85 @@ def cat_cont_graph(pandas_df, predictor, response):
             pandas_df[pandas_df[predictor] == predictor_name][response]
         )  # noqa: E501
 
-        # Create distribution plot with custom bin_size
-        fig = ff.create_distplot(hist_data, group_labels)
-        fig.update_layout(
-            title=f"{predictor} by {response}",
-            xaxis_title=response,
-            yaxis_title="Distribution",
+    # Create distribution plot
+    fig = ff.create_distplot(hist_data, group_labels)
+    fig.update_layout(
+        title=f"{predictor} by {response}",
+        xaxis_title=response,
+        yaxis_title="Distribution",
+    )
+
+    fig.write_html(
+        file=f"plots/{predictor}_{response}_dist_plot.html",
+        include_plotlyjs="cdn",
+    )
+
+    fig_2 = go.Figure()
+    for curr_hist, curr_group in zip(hist_data, group_labels):
+        fig_2.add_trace(
+            go.Violin(
+                x=curr_group,
+                y=curr_hist,
+                name=curr_group,
+                box_visible=True,
+                meanline_visible=True,
+            )
         )
-        fig.write_image(
-            file=f"plots/{predictor}_{response}_dist_plot.html",
-            include_plotlyjs="cdn",
-        )
-    return f"plots/{predictor}_{response}_dist_plot.html"
+
+    fig_2.update_layout(
+        title=f"{response}by {predictor} ",
+        xaxis_title="Groupings",
+        yaxis_title=response,
+    )
+    fig_2.show()
+    fig_2.write_html(
+        file=f"plots/{predictor}_{response}_violin_plot.html",
+        include_plotlyjs="cdn",
+    )
+
+    file2 = f"plots/{predictor}_{response}_violin_plot.html"
+    file1 = f"plots/{predictor}_{response}_dist_plot.html"
+
+    both_plots = f"""        {COL_OPEN}<a href="{file1}">{predictor} by {response} Distribution Plot</a></div>
+            {COL_OPEN}<a href={file2}">{predictor} by {response} Violin Plot</a></div>
+    """  # noqa: E501
+    return both_plots
 
 
-def cont_bool_graph(pandas_df, predictor, response):
-    return
+def logistic_regression(pandas_df, predictor, response):
+    predictor_for_model = statsmodels.api.add_constant(pandas_df[predictor])
+    logistic_regression_model = statsmodels.api.Logit(
+        pandas_df[response], predictor_for_model
+    )
+    logistic_regression_model_fitted = logistic_regression_model.fit()
 
+    # Get the stats
+    t_value = round(logistic_regression_model_fitted.tvalues[1], 6)
+    p_value = "{:.6e}".format(logistic_regression_model_fitted.pvalues[1])
 
-def cont_cont_graph(predictor_name, predictor_column, response_name, response):
-    return
+    CONT_PRED[CONT_PRED["Predictor"] == predictor]["t-value"] = t_value
+    CONT_PRED[CONT_PRED["Predictor"] == predictor]["p-value"] = p_value
+
+    # Plot the figure
+    fig = px.scatter(
+        x=pandas_df[predictor],
+        y=pandas_df[response],
+        trendline="ols",
+        trendline_options=dict(log_x=True),
+    )  # noqa: E501
+    fig.update_layout(
+        title=f"Variable: {predictor}: (t-value={t_value}) (p-value={p_value})",  # noqa: E501
+        xaxis_title=f"Variable: {predictor}",
+        yaxis_title="y",
+    )
+
+    fig.write_html(
+        file=f"plots/{pandas_df}_{predictor}_{response}_logistic_regression.html",  # noqa: E501
+        include_plotlyjs="cdn",
+    )  # noqa: E501
+    filename = f"plots/{pandas_df}_{predictor}_{response}_logistic_regression.html"  # noqa: E501
+    col = f'    {COL_OPEN}<a href="plots/{filename}">{predictor} vs {response} Logistic Regression Plot</a></div>'  # noqa: E501
+    return col
 
 
 def linear_regression(pandas_df, predictor, response):
@@ -242,11 +316,13 @@ def linear_regression(pandas_df, predictor, response):
         pandas_df[response], predictor_for_model
     )
     linear_regression_model_fitted = linear_regression_model.fit()
-    print(f"Variable: {predictor}")
-    print(linear_regression_model_fitted.summary())
+
     # Get the stats
     t_value = round(linear_regression_model_fitted.tvalues[1], 6)
     p_value = "{:.6e}".format(linear_regression_model_fitted.pvalues[1])
+
+    CONT_PRED[CONT_PRED["Predictor"] == predictor]["t-value"] = t_value
+    CONT_PRED[CONT_PRED["Predictor"] == predictor]["p-value"] = p_value
 
     # Plot the figure
     fig = px.scatter(
@@ -259,7 +335,11 @@ def linear_regression(pandas_df, predictor, response):
     )
 
     fig.write_image(
-        f"plots/{pandas_df}_{predictor}_{response}_linear_regression.png"
+        file=f"plots/{pandas_df}_{predictor}_{response}_linear_regression.html",  # noqa: E501
+        include_plotlyjs="cdn",
     )  # noqa: E501
-
-    return f"{pandas_df}_{predictor}_{response}_linear_regression.png"
+    filename = (
+        f"plots/{pandas_df}_{predictor}_{response}_linear_regression.html"  # noqa: E501
+    )
+    col = f'    {COL_OPEN}<a href="plots/{filename}">{predictor} vs {response} Linear Regression Plot</a></div>'  # noqa: E501
+    return col
