@@ -1,0 +1,21 @@
+/* https://stackoverflow.com/questions/3053205/how-create-table-only-using-div-tag-and-css 
+Using div for tables because it is better for accessibility and creating responsive tables
+*/
+.div-table {
+  display: table;
+  width: auto;
+  background-color: #eee;
+  border: 1px solid #666666;
+  border-spacing: 5px; /* cellspacing:poor IE support for  this */
+}
+.div-table-row {
+  display: table-row;
+  width: auto;
+  clear: both;
+}
+.div-table-col {
+  float: left; /* fix for  buggy browsers */
+  display: table-column;
+  width: auto;
+  background-color: #ccc;
+}
