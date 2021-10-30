@@ -49,7 +49,7 @@ def process_dataframe(
         elif is_numeric_dtype(pred_data):
             uniq = pred_data.unique()
             sorted_diff = sum(np.diff(sorted(uniq)))
-            if len(uniq) <= 10 and sorted_diff == (len(uniq) - 1):
+            if len(uniq) <= 5 and sorted_diff == (len(uniq) - 1):
                 cat_list.append(pred)
             else:
                 cont_list.append(pred)
@@ -126,7 +126,7 @@ def process_dataframe(
             "Logistic Regression Plot",
         ]
     )
-    cont_cat_corr_matrix = pd.DataFrame(columns=cont_list, index=cat_list)
+    cont_cat_corr_matrix = pd.DataFrame(columns=cat_list, index=cont_list)
     cont_cat_diff = pd.DataFrame(
         columns=[
             "Predictor 1",
@@ -517,7 +517,11 @@ def cat_correlation(x, y, bias_correction=True, tschuprow=False):
     """
     corr_coeff = np.nan
     try:
-        x, y = fill_na(x), fill_na(y)
+        # using pandas since only passing df through this program
+        if pd.isna(x).any():
+            x = fill_na(x)
+        if pd.isna(y).any():
+            y = fill_na(y)
         crosstab_matrix = pd.crosstab(x, y)
         n_obs = crosstab_matrix.sum().sum()
 
@@ -595,8 +599,8 @@ def cat_cont_corr_ratio(categories, values):
 def make_heatmap_html(matrix: pd.DataFrame):
     fig = go.Figure(
         data=go.Heatmap(
-            x=matrix.index,
-            y=matrix.columns,
+            x=matrix.columns,
+            y=matrix.index,
             z=matrix.values,
             zmin=0,
             zmax=1,
