@@ -22,15 +22,14 @@ from plotly import graph_objects as go
 from scipy import stats
 from sklearn.preprocessing import LabelEncoder
 
-PATH = os.path.join(os.getcwd(), "plots")
-
 
 def process_dataframe(
     pandas_df: pd.DataFrame, predictor_columns: list, response_column: str
 ):
     # set up things create dir for plots
-    if not os.path.exists(PATH):
-        os.mkdir(PATH)
+    path = os.path.join(os.getcwd(), "plots")
+    if not os.path.exists(path):
+        os.mkdir(path)
 
     # lists to put separate predictors and response var
     cont_list = []
@@ -347,7 +346,7 @@ def heat_mx(df, predictor, response):
         yaxis_title=f"{response}",
     )
 
-    filename = f"{PATH}/{predictor}_{response}_heatmap.html"
+    filename = f"plots/{predictor}_{response}_heatmap.html"
 
     fig.write_html(
         file=filename,
@@ -369,7 +368,7 @@ def linear_regression(df, predictor, response):
     t_value = round(linear_regression_model_fitted.tvalues[1], 6)
     p_value = "{:.6e}".format(linear_regression_model_fitted.pvalues[1])
 
-    filename = f"{PATH}/{predictor}_{response}_linear_regression.html"
+    filename = f"plots/{predictor}_{response}_linear_regression.html"
 
     # Plot the figure
     fig = px.scatter(
@@ -389,8 +388,8 @@ def linear_regression(df, predictor, response):
 
 
 def cont_cat_graph(df, predictor, response):
-    filename1 = f"{PATH}/{predictor}_{response}_dist_plot.html"
-    filename2 = f"{PATH}/{predictor}_{response}_violin_plot.html"
+    filename1 = f"plots/{predictor}_{response}_dist_plot.html"
+    filename2 = f"plots/{predictor}_{response}_violin_plot.html"
     group_labels = df[response].unique()
     hist_data = []
 
@@ -645,7 +644,7 @@ def cont_cont_dwm(
         xaxis=dict(tickmode="array", tickvals=np.around(pred2_edges, 3)),
         yaxis=dict(tickmode="array", tickvals=np.around(pred1_edges, 3)),
     )
-    filename1 = f"{PATH}/{pred1}_{pred2}_diff_of_mean_resp_bin.html"
+    filename1 = f"plots/{pred1}_{pred2}_diff_of_mean_resp_bin.html"
 
     fig.write_html(
         file=filename1,
@@ -676,7 +675,7 @@ def cont_cont_dwm(
         xaxis=dict(tickmode="array", tickvals=np.around(pred2_edges, 3)),
         yaxis=dict(tickmode="array", tickvals=np.around(pred1_edges, 3)),
     )
-    filename2 = f"{PATH}/{pred1}_{pred2}_dwm_of_resp_residual.html"
+    filename2 = f"plots/{pred1}_{pred2}_dwm_of_resp_residual.html"
 
     fig_2.write_html(
         file=filename2,
@@ -749,7 +748,7 @@ def cont_cat_dwm(df: pd.DataFrame, pred1: str, pred2: str, response: str):  # no
         title_text=f"{pred1} & {pred2} Bin Averages of Response",
         xaxis=dict(tickmode="array", tickvals=np.around(pred1_edges, 3)),
     )
-    filename1 = f"{PATH}/{pred1}_{pred2}_diff_of_mean_resp_bin.html"
+    filename1 = f"plots/{pred1}_{pred2}_diff_of_mean_resp_bin.html"
 
     fig.write_html(
         file=filename1,
@@ -780,7 +779,7 @@ def cont_cat_dwm(df: pd.DataFrame, pred1: str, pred2: str, response: str):  # no
         title_text=f"{pred1} & {pred2} Bin Average",
         xaxis=dict(tickmode="array", tickvals=np.around(pred1_edges, 3)),
     )
-    filename2 = f"{PATH}/{pred1}_{pred2}_dwm_of_resp_residual.html"
+    filename2 = f"plots/{pred1}_{pred2}_dwm_of_resp_residual.html"
 
     fig_2.write_html(
         file=filename2,
@@ -838,7 +837,7 @@ def cat_cat_dwm(df: pd.DataFrame, pred1: str, pred2: str, response: str):
     )
 
     fig.update_layout(title_text=f"{pred1} & {pred2} Bin Averages of Response")
-    filename1 = f"{PATH}/{pred1}_{pred2}_diff_of_mean_resp_bin.html"
+    filename1 = f"plots/{pred1}_{pred2}_diff_of_mean_resp_bin.html"
 
     fig.write_html(
         file=filename1,
@@ -866,7 +865,7 @@ def cat_cat_dwm(df: pd.DataFrame, pred1: str, pred2: str, response: str):
     )
 
     fig_2.update_layout(title_text=f"{pred1} & {pred2} Bin Average")
-    filename2 = f"{PATH}/{pred1}_{pred2}_dwm_of_resp_residual.html"
+    filename2 = f"plots/{pred1}_{pred2}_dwm_of_resp_residual.html"
 
     fig_2.write_html(
         file=filename2,
