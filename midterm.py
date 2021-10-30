@@ -197,7 +197,7 @@ def process_dataframe(
         # Plotting
         file = heat_mx(pandas_df, pred1, pred2)
         # Correlations Stats
-        cat_cat_corr = cat_correlation(pred1, pred2)
+        cat_cat_corr = cat_correlation(pandas_df[pred1], pandas_df[pred2])
         # Put value in correlation matrix
         cat_cat_corr_matrix.at[pred1, pred2] = cat_cat_corr
         cat_cat_corr_matrix.at[pred2, pred1] = cat_cat_corr
