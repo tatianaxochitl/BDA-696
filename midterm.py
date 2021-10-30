@@ -614,8 +614,7 @@ def make_heatmap_html(matrix: pd.DataFrame):
 def cont_cont_dwm(
     df: pd.DataFrame, pred1: str, pred2: str, response: str
 ):  # noqa: E501
-    pred1_edges = np.histogram_bin_edges(df[pred1], bins="sturges")
-    pred2_edges = np.histogram_bin_edges(df[pred2], bins="sturges")
+    hist, pred1_edges, pred2_edges = np.histogram2d(df[pred1], df[pred2])
     bin_mean, pred1_edges, pred2_edges, bin_num = stats.binned_statistic_2d(
         df[pred1],
         df[pred2],
@@ -648,28 +647,32 @@ def cont_cont_dwm(
     w_sq_diff = pop_prop * sq_diff
     wmsd = np.nansum(w_sq_diff)
 
-    # creating graphs
-    # bin plot
-    # make annotations
-    # round_mean = np.around(bin_mean, 3)
-    # mean_w_pop = round_mean + '(pop: ' + bin_count + ')'
+    pop_prop = pop_prop.round(3)
     # note: plotly defines x opposite of binned stats so
     # I have swapped pred 1 & 2 so now pred2 is x ....
     fig = ff.create_annotated_heatmap(
         x=pred2_centers,
         y=pred1_centers,
         z=bin_mean,
-        # annotation_text= mean_w_pop,
+        annotation_text=bin_mean.round(3),
         colorscale="curl",
         showscale=True,
-        hovertemplate="<b>x</b>: %{x}" + "<b>y</b>: %{y}" + "<b>z</b> %{z}",
+        customdata=pop_prop,
+        hovertemplate="<b>x</b>: %{x}<br>"
+        + "<b>y</b>: %{y}<br>"
+        + "<b>z</b>: %{z}"
+        + "<extra>Population<br>Proportion: %{customdata}</extra>",
         hoverongaps=False,
         zmid=pop_mean,
         zmin=df[response].min(),
         zmax=df[response].max(),
     )
 
-    fig.update_layout(title_text=f"{pred1} & {pred2} Bin Averages of Response")
+    fig.update_layout(
+        title_text=f"{pred1} & {pred2} Bin Averages of Response",
+        xaxis=dict(tickmode="array", tickvals=np.around(pred2_edges, 3)),
+        yaxis=dict(tickmode="array", tickvals=np.around(pred1_edges, 3)),
+    )
     filename1 = f"{PATH}/{pred1}_{pred2}_diff_of_mean_resp_bin.html"
 
     fig.write_html(
@@ -678,14 +681,17 @@ def cont_cont_dwm(
     )
 
     # residual plot
-    # diff_w_pop = str(diff) + "(pop: " + str(bin_count) + ")"
-    fig = ff.create_annotated_heatmap(
+    fig_2 = ff.create_annotated_heatmap(
         x=pred2_centers,
         y=pred1_centers,
         z=diff,
         colorscale="curl",
-        hovertemplate="<b>x</b>: %{x}" + "<b>y</b>: %{y}" + "<b>z</b> %{z}",
-        # annotation_text=diff_w_pop,
+        customdata=pop_prop,
+        hovertemplate="<b>x</b>: %{x}<br>"
+        + "<b>y</b>: %{y}<br>"
+        + "<b>z</b>: %{z}"
+        + "<extra>Population<br>Proportion: %{customdata}</extra>",
+        annotation_text=diff.round(3),
         hoverongaps=False,
         showscale=True,
         zmid=pop_mean,
@@ -693,11 +699,15 @@ def cont_cont_dwm(
         zmax=df[response].max(),
     )
 
-    fig.update_layout(title_text=f"{pred1} & {pred2} Bin Average")
+    fig_2.update_layout(
+        title_text=f"{pred1} & {pred2} Bin Average",
+        xaxis=dict(tickmode="array", tickvals=np.around(pred2_edges, 3)),
+        yaxis=dict(tickmode="array", tickvals=np.around(pred1_edges, 3)),
+    )
     filename2 = f"{PATH}/{pred1}_{pred2}_dwm_of_resp_residual.html"
 
-    fig.write_html(
-        file=filename1,
+    fig_2.write_html(
+        file=filename2,
         include_plotlyjs="cdn",
     )
 
@@ -743,21 +753,30 @@ def cont_cat_dwm(df: pd.DataFrame, pred1: str, pred2: str, response: str):  # no
     w_sq_diff = pop_prop * sq_diff
     wmsd = np.nansum(w_sq_diff)
 
+    pop_prop = pop_prop.astype("float").round(3)
+    round_bin_mean = bin_mean.astype("float").round(3)
     fig = ff.create_annotated_heatmap(
         x=pred1_centers,
         y=categories.tolist(),
         z=bin_mean.values.tolist(),
-        # annotation_text= mean_w_pop,
+        annotation_text=round_bin_mean.values.tolist(),
         colorscale="curl",
         showscale=True,
-        hovertemplate="<b>x</b>: %{x}" + "<b>y</b>: %{y}" + "<b>z</b> %{z}",
+        customdata=pop_prop,
+        hovertemplate="<b>x</b>: %{x}<br>"
+        + "<b>y</b>: %{y}<br>"
+        + "<b>z</b>: %{z}"
+        + "<extra>Population<br>Proportion: %{customdata}</extra>",
         hoverongaps=False,
         zmid=pop_mean,
         zmin=df[response].min(),
         zmax=df[response].max(),
     )
 
-    fig.update_layout(title_text=f"{pred1} & {pred2} Bin Averages of Response")
+    fig.update_layout(
+        title_text=f"{pred1} & {pred2} Bin Averages of Response",
+        xaxis=dict(tickmode="array", tickvals=np.around(pred1_edges, 3)),
+    )
     filename1 = f"{PATH}/{pred1}_{pred2}_diff_of_mean_resp_bin.html"
 
     fig.write_html(
@@ -766,14 +785,18 @@ def cont_cat_dwm(df: pd.DataFrame, pred1: str, pred2: str, response: str):  # no
     )
 
     # residual plot
-    # diff_w_pop = str(diff) + "(pop: " + str(bin_count) + ")"
-    fig = ff.create_annotated_heatmap(
+    round_diff = diff.astype("float").round(3)
+    fig_2 = ff.create_annotated_heatmap(
         x=pred1_centers,
         y=categories.tolist(),
         z=diff.values.tolist(),
         colorscale="curl",
-        hovertemplate="<b>x</b>: %{x}" + "<b>y</b>: %{y}" + "<b>z</b> %{z}",
-        # annotation_text=diff_w_pop,
+        customdata=pop_prop,
+        hovertemplate="<b>x</b>: %{x}<br>"
+        + "<b>y</b>: %{y}<br>"
+        + "<b>z</b>: %{z}"
+        + "<extra>Population<br>Proportion: %{customdata}</extra>",
+        annotation_text=round_diff.values.tolist(),
         hoverongaps=False,
         showscale=True,
         zmid=pop_mean,
@@ -781,10 +804,13 @@ def cont_cat_dwm(df: pd.DataFrame, pred1: str, pred2: str, response: str):  # no
         zmax=df[response].max(),
     )
 
-    fig.update_layout(title_text=f"{pred1} & {pred2} Bin Average")
+    fig_2.update_layout(
+        title_text=f"{pred1} & {pred2} Bin Average",
+        xaxis=dict(tickmode="array", tickvals=np.around(pred1_edges, 3)),
+    )
     filename2 = f"{PATH}/{pred1}_{pred2}_dwm_of_resp_residual.html"
 
-    fig.write_html(
+    fig_2.write_html(
         file=filename2,
         include_plotlyjs="cdn",
     )
@@ -794,8 +820,10 @@ def cont_cat_dwm(df: pd.DataFrame, pred1: str, pred2: str, response: str):  # no
 
 def cat_cat_dwm(df: pd.DataFrame, pred1: str, pred2: str, response: str):
     # getting unique values for each category
-    categories1 = df[pred1].unique()
-    categories2 = df[pred2].unique()
+    categories1 = df[pred1].unique().astype("string")
+    categories2 = df[pred2].unique().astype("string")
+    categories1 = sorted(categories1)
+    categories2 = sorted(categories2)
 
     # get mean and bin count
     bin_mean = pd.crosstab(
@@ -818,14 +846,19 @@ def cat_cat_dwm(df: pd.DataFrame, pred1: str, pred2: str, response: str):
     w_sq_diff = pop_prop * sq_diff
     wmsd = np.nansum(w_sq_diff)
 
+    pop_prop = pop_prop.round(3)
     fig = ff.create_annotated_heatmap(
-        x=categories2.tolist(),
-        y=categories1.tolist(),
+        x=bin_mean.columns.tolist(),
+        y=bin_mean.index.tolist(),
         z=bin_mean.values,
-        # annotation_text= mean_w_pop,
+        annotation_text=bin_mean.values.round(3),
         colorscale="curl",
         showscale=True,
-        hovertemplate="<b>x</b>: %{x}" + "<b>y</b>: %{y}" + "<b>z</b> %{z}",
+        customdata=pop_prop.values,
+        hovertemplate="<b>x</b>: %{x}<br>"
+        + "<b>y</b>: %{y}<br>"
+        + "<b>z</b>: %{z}"
+        + "<extra>Population<br>Proportion: %{customdata}</extra>",
         hoverongaps=False,
         zmid=pop_mean,
         zmin=df[response].min(),
@@ -842,13 +875,17 @@ def cat_cat_dwm(df: pd.DataFrame, pred1: str, pred2: str, response: str):
 
     # residual plot
     # diff_w_pop = str(diff) + "(pop: " + str(bin_count) + ")"
-    fig = ff.create_annotated_heatmap(
-        x=categories2.tolist(),
-        y=categories1.tolist(),
+    fig_2 = ff.create_annotated_heatmap(
+        x=categories2,
+        y=categories1,
         z=diff.values,
         colorscale="curl",
-        hovertemplate="<b>x</b>: %{x}" + "<b>y</b>: %{y}" + "<b>z</b> %{z}",
-        # annotation_text=diff_w_pop,
+        customdata=pop_prop,
+        hovertemplate="<b>x</b>: %{x}<br>"
+        + "<b>y</b>: %{y}<br>"
+        + "<b>z</b>: %{z}"
+        + "<extra>Population<br>Proportion: %{customdata}</extra>",
+        annotation_text=diff.values.round(3),
         hoverongaps=False,
         showscale=True,
         zmid=pop_mean,
@@ -856,10 +893,10 @@ def cat_cat_dwm(df: pd.DataFrame, pred1: str, pred2: str, response: str):
         zmax=df[response].max(),
     )
 
-    fig.update_layout(title_text=f"{pred1} & {pred2} Bin Average")
+    fig_2.update_layout(title_text=f"{pred1} & {pred2} Bin Average")
     filename2 = f"{PATH}/{pred1}_{pred2}_dwm_of_resp_residual.html"
 
-    fig.write_html(
+    fig_2.write_html(
         file=filename2,
         include_plotlyjs="cdn",
     )
