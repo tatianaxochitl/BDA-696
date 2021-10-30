@@ -1,21 +1,41 @@
-/* https://stackoverflow.com/questions/3053205/how-create-table-only-using-div-tag-and-css 
-Using div for tables because it is better for accessibility and creating responsive tables
-*/
-.div-table {
-  display: table;
-  width: auto;
-  background-color: #eee;
-  border: 1px solid #666666;
-  border-spacing: 5px; /* cellspacing:poor IE support for  this */
+table {
+  border-collapse: collapse;
+  margin-left: auto;
+  margin-right: auto;
 }
-.div-table-row {
-  display: table-row;
-  width: auto;
-  clear: both;
+
+tr:nth-child(even) {
+  background-color: #f2f2f2;
 }
-.div-table-col {
-  float: left; /* fix for  buggy browsers */
-  display: table-column;
-  width: auto;
-  background-color: #ccc;
+
+th,
+td {
+  padding: 15px;
+}
+
+th {
+  background-color: #e6ded0;
+}
+
+body {
+  font-family: "Helvetica", "Arial", sans-serif;
+  font-size: 14pt;
+  background-color: #fafafa;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  text-align: center;
+}
+
+a {
+  color: #18646d;
+}
+
+a:visited {
+  color: #5a144e;
 }

@@ -123,7 +123,6 @@ def process_dataframe(
             "Absolute Value of Correlation",
             "Violin Plot",
             "Distribution Plot",
-            "Logistic Regression Plot",
         ]
     )
     cont_cat_corr_matrix = pd.DataFrame(columns=cat_list, index=cont_list)
@@ -141,7 +140,6 @@ def process_dataframe(
         for pred2 in cat_list:
             # Plotting
             file1, file2 = cont_cat_graph(pandas_df, pred1, pred2)
-            file3 = logistic_regression(pandas_df, pred1, pred2)
             # Correlation Stats
             pred1_array = pandas_df[pred1].to_numpy()
             pred2_array = pandas_df[pred2].to_numpy()
@@ -155,7 +153,6 @@ def process_dataframe(
                 "Absolute Value of Correlation": abs(cont_cat_corr),
                 "Violin Plot": file1,
                 "Distribution Plot": file2,
-                "Logistic Regression Plot": file3,
             }
             cont_cat_df = cont_cat_df.append(new_row, ignore_index=True)
             # Brute Force
@@ -261,9 +258,6 @@ def process_dataframe(
     cont_cat_df["Distribution Plot"] = make_html_link(
         cont_cat_df["Distribution Plot"]
     )  # noqa: E80
-    cont_cat_df["Logistic Regression Plot"] = make_html_link(
-        cont_cat_df["Logistic Regression Plot"]
-    )
     cont_cat_diff["Bin Plot"] = make_html_link(cont_cat_diff["Bin Plot"])
     cont_cat_diff["Residual Plot"] = make_html_link(
         cont_cat_diff["Residual Plot"]
@@ -289,25 +283,37 @@ def process_dataframe(
     """
     page.write(header)
     page.write("<h3>Correlation Table</h3>")
-    page.write(cont_cont_df.to_html(escape=False))
+    page.write(
+        cont_cont_df.to_html(escape=False, index=False, justify="center")
+    )  # noqa: E501
     page.write("<h3>Correlation Matrix</h3>")
     page.write(make_heatmap_html(cont_cont_corr_matrix))
     page.write('<h3>"Brute Force" Table</h3>')
-    page.write(cont_cont_diff.to_html(escape=False))
+    page.write(
+        cont_cont_diff.to_html(escape=False, index=False, justify="center")
+    )  # noqa: E501
     page.write("<h2>Continous/Categorical Predictor Pairs</h2>")
     page.write("<h3>Correlation Table</h3>")
-    page.write(cont_cat_df.to_html(escape=False))
+    page.write(
+        cont_cat_df.to_html(escape=False, index=False, justify="center")
+    )  # noqa: E501
     page.write("<h3>Correlation Matrix</h3>")
     page.write(make_heatmap_html(cont_cat_corr_matrix))
     page.write('<h3>"Brute Force" Table</h3>')
-    page.write(cont_cat_diff.to_html(escape=False))
+    page.write(
+        cont_cat_diff.to_html(escape=False, index=False, justify="center")
+    )  # noqa: E501
     page.write("<h2>Categorical/Categorical Predictor Pairs</h2>")
     page.write("<h3>Correlation Table</h3>")
-    page.write(cat_cat_df.to_html(escape=False))
+    page.write(
+        cat_cat_df.to_html(escape=False, index=False, justify="center")
+    )  # noqa: E501
     page.write("<h3>Correlation Matrix</h3>")
     page.write(make_heatmap_html(cat_cat_corr_matrix))
     page.write('<h3>"Brute Force" Table</h3>')
-    page.write(cat_cat_diff.to_html(escape=False))
+    page.write(
+        cat_cat_diff.to_html(escape=False, index=False, justify="center")
+    )  # noqa: E501
 
     footer = """<p>BDA696 Midterm, Fall 2021, by Tatiana Chavez</p>
     </body>
@@ -378,59 +384,6 @@ def linear_regression(df, predictor, response):
         file=filename,
         include_plotlyjs="cdn",
     )
-
-    return filename
-
-
-def logistic_regression(df, predictor, response):
-    predictor_for_model = statsmodels.api.add_constant(df[predictor])
-    logistic_regression_model = statsmodels.api.MNLogit(
-        df[response], predictor_for_model
-    )
-    logistic_regression_model_fitted = logistic_regression_model.fit()
-
-    # Get the stats
-    t_value = round(logistic_regression_model_fitted.tvalues, 6)
-    p_value = round(logistic_regression_model_fitted.pvalues, 6)
-
-    # Encode the categorical so it can be plotted
-    label_encoder = LabelEncoder()
-    int_encoded = label_encoder.fit_transform(df[response])
-
-    # Dealing with negative data hehe
-    if (df[predictor].values <= 0).any():
-        temp = df[predictor] + 1
-        temp -= df[predictor].min()
-    else:
-        temp = df[predictor]
-
-    # Plot the figure
-    fig = px.scatter(
-        x=temp,
-        y=int_encoded,
-        trendline="ols",
-        trendline_options=dict(log_x=True),
-    )
-
-    fig.update_layout(
-        xaxis=dict(
-            tickmode="array",
-            ticktext=np.unique(int_encoded),
-            tickvals=df[response].unique(),
-        )
-    )
-
-    fig.update_layout(
-        title=f"Variable: {predictor}: (t-value={t_value}) (p-value={p_value})",  # noqa: E501
-        xaxis_title=f"Variable: {predictor}",
-        yaxis_title=f"{response}",
-    )
-
-    filename = f"{PATH}/{predictor}_{response}_logistic_regression.html"  # noqa: E501
-    fig.write_html(
-        file=filename,
-        include_plotlyjs="cdn",
-    )  # noqa: E501
 
     return filename
 
@@ -604,7 +557,7 @@ def make_heatmap_html(matrix: pd.DataFrame):
             z=matrix.values,
             zmin=0,
             zmax=1,
-            colorscale="thermal",
+            colorscale="curl",
         )
     )
     matrix_html = fig.to_html()
@@ -614,15 +567,34 @@ def make_heatmap_html(matrix: pd.DataFrame):
 def cont_cont_dwm(
     df: pd.DataFrame, pred1: str, pred2: str, response: str
 ):  # noqa: E501
-    hist, pred1_edges, pred2_edges = np.histogram2d(df[pred1], df[pred2])
-    bin_mean, pred1_edges, pred2_edges, bin_num = stats.binned_statistic_2d(
+    pred1_edges = np.histogram_bin_edges(df[pred1], bins="sturges")
+    pred2_edges = np.histogram_bin_edges(df[pred2], bins="sturges")
+    hist, pred1_edges, pred2_edges = np.histogram2d(
+        df[pred1], df[pred2], [pred1_edges, pred2_edges]
+    )
+    bin_num1 = len(pred1_edges) - 1
+    bin_num2 = len(pred2_edges) - 1
+    total_bin = bin_num1 * bin_num2
+    nan_count = total_bin - np.count_nonzero(hist)
+    nan_percent = nan_count / total_bin
+    while nan_percent >= 0.5:
+        bin_num1 -= 1
+        bin_num2 -= 1
+        hist, pred1_edges, pred2_edges = np.histogram2d(
+            df[pred1], df[pred2], [bin_num1, bin_num2]
+        )
+        total_bin = bin_num1 * bin_num2
+        nan_count = total_bin - np.count_nonzero(hist)
+        nan_percent = nan_count / total_bin
+
+    bin_mean, pred1_edges, pred2_edges, b = stats.binned_statistic_2d(
         df[pred1],
         df[pred2],
         df[response],
         statistic="mean",
         bins=(pred1_edges, pred2_edges),
     )
-    bin_count, pred1_edges, pred2_edges, bin_num = stats.binned_statistic_2d(
+    bin_count, pred1_edges, pred2_edges, b = stats.binned_statistic_2d(
         df[pred1],
         df[pred2],
         df[response],
@@ -641,7 +613,7 @@ def cont_cont_dwm(
     diff = bin_mean - pop_mean
     sq_diff = np.square(diff)
     sum_sq_diff = np.nansum(sq_diff)
-    total_bin = len(pred1_centers) * len(pred2_centers)
+    total_bin = bin_mean.size
     msd = sum_sq_diff / total_bin
     pop_prop = bin_count / len(df[response])
     w_sq_diff = pop_prop * sq_diff
