@@ -277,7 +277,7 @@ def process_dataframe(
         <title>Midterm</title>
     </head>
     <body>
-    <h1>Midterm</h1>
+    <h1>Predictor Analysis</h1>
     <h2>Continous/Continous Predictor Pairs</h2>
     """
     page.write(header)
@@ -321,7 +321,7 @@ def process_dataframe(
     page.write(footer)
 
     webbrowser.open(f"midterm_analysis_{tag}.html", new=2)
-    return
+    return f"midterm_analysis_{tag}.html"
 
 
 # make categorical vs categorical graph
@@ -566,25 +566,8 @@ def make_heatmap_html(matrix: pd.DataFrame):
 def cont_cont_dwm(
     df: pd.DataFrame, pred1: str, pred2: str, response: str
 ):  # noqa: E501
-    pred1_edges = np.histogram_bin_edges(df[pred1], bins="sturges")
-    pred2_edges = np.histogram_bin_edges(df[pred2], bins="sturges")
-    hist, pred1_edges, pred2_edges = np.histogram2d(
-        df[pred1], df[pred2], [pred1_edges, pred2_edges]
-    )
-    bin_num1 = len(pred1_edges) - 1
-    bin_num2 = len(pred2_edges) - 1
-    total_bin = bin_num1 * bin_num2
-    nan_count = total_bin - np.count_nonzero(hist)
-    nan_percent = nan_count / total_bin
-    while nan_percent >= 0.5:
-        bin_num1 -= 1
-        bin_num2 -= 1
-        hist, pred1_edges, pred2_edges = np.histogram2d(
-            df[pred1], df[pred2], [bin_num1, bin_num2]
-        )
-        total_bin = bin_num1 * bin_num2
-        nan_count = total_bin - np.count_nonzero(hist)
-        nan_percent = nan_count / total_bin
+    pred1_edges = np.histogram_bin_edges(df[pred1], bins=10)
+    pred2_edges = np.histogram_bin_edges(df[pred2], bins=10)
 
     bin_mean, pred1_edges, pred2_edges, b = stats.binned_statistic_2d(
         df[pred1],
@@ -593,6 +576,7 @@ def cont_cont_dwm(
         statistic="mean",
         bins=(pred1_edges, pred2_edges),
     )
+
     bin_count, pred1_edges, pred2_edges, b = stats.binned_statistic_2d(
         df[pred1],
         df[pred2],
@@ -600,6 +584,7 @@ def cont_cont_dwm(
         statistic="count",
         bins=(pred1_edges, pred2_edges),
     )
+
     pop_mean = df[response].mean()
 
     # using later for graphs and also for calculations
@@ -706,7 +691,7 @@ def cont_cat_dwm(df: pd.DataFrame, pred1: str, pred2: str, response: str):  # no
             temp_bin = df[
                 (df[pred2] == categories[x])
                 & (df[pred1] >= pred1_edges[i])
-                & (df[pred1] > pred1_edges[i + 1])
+                & (df[pred1] < pred1_edges[i + 1])
             ][response]
             all_bin.at[int_encoded[x], pred1_centers[i]] = temp_bin
             bin_count.loc[int_encoded[x], pred1_centers[i]] = len(temp_bin)
@@ -791,8 +776,8 @@ def cont_cat_dwm(df: pd.DataFrame, pred1: str, pred2: str, response: str):  # no
 
 def cat_cat_dwm(df: pd.DataFrame, pred1: str, pred2: str, response: str):
     # getting unique values for each category
-    categories1 = df[pred1].unique().astype("string")
-    categories2 = df[pred2].unique().astype("string")
+    categories1 = df[pred1].unique().astype(str)
+    categories2 = df[pred2].unique().astype(str)
     categories1 = sorted(categories1)
     categories2 = sorted(categories2)
 
