@@ -38,3 +38,10 @@
 1. Use testing-data.py to test the datasets, you can add your own as well.
 2. The .html file should save as midterm*analysis*{5CAPS}.html
 3. Open the file to look at the results
+
+# Assignment 5 Instruction
+
+- install new requirements.txt before following instructions
+
+1. Run assignment-5.sql on db connection
+2. Run assignment-5.py (change user and password to match your connection)
