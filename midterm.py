@@ -671,7 +671,7 @@ def cont_cont_dwm(
 
 
 # predictor 1 is continous predictor 2 is categorical
-def cont_cat_dwm(df: pd.DataFrame, pred1: str, pred2: str, response: str):  # noqa: E501
+def cont_cat_dwm(df: pd.DataFrame, pred1: str, pred2: str, response: str):
     pred1_edges = np.histogram_bin_edges(df[pred1], bins="sturges")
     # getting values for each category
     categories = df[pred2].unique()
