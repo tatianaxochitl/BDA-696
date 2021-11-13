@@ -146,7 +146,6 @@ def process_dataframe(
             "Weighted Difference of Mean Response",
             "Bin Plot",
             "Response Plot",
-            "Response Plot 2",
         ]
     )
     rf = rf_importance(pandas_df, cont_list, response_column)
@@ -167,7 +166,6 @@ def process_dataframe(
             "Weighted Difference of Mean Response": wmsd,
             "Bin Plot": file1,
             "Response Plot": file2,
-            "Response Plot 2": file3,
         }
         all_pred_df = all_pred_df.append(new_row, ignore_index=True)
         i += 1
@@ -295,10 +293,6 @@ def process_dataframe(
     all_pred_df["Bin Plot"] = make_html_link(all_pred_df["Bin Plot"])
 
     all_pred_df["Response Plot"] = make_html_link(all_pred_df["Response Plot"])
-
-    all_pred_df["Response Plot 2"] = make_html_link(
-        all_pred_df["Response Plot 2"]
-    )  # noqa: E501
 
     cont_cont_df["Linear Regression Plot"] = make_html_link(
         cont_cont_df["Linear Regression Plot"]
@@ -922,14 +916,11 @@ def make_html_link(plot_col: pd.Series):
     # regex for making link text
     regex = ".+/([^/]+).html$"
     for x in range(len(plot_col)):
-        if np.nan(plot_col[x]):
-            plot_col[x] = ""
-        else:
-            text = re.findall(regex, plot_col[x])
-            link_html = (
-                f'<a target="_blank" href="{plot_col[x]}">{text[0]}</a>'  # noqa: E501
-            )
-            plot_col[x] = link_html
+        text = re.findall(regex, plot_col[x])
+        link_html = (
+            f'<a target="_blank" href="{plot_col[x]}">{text[0]}</a>'  # noqa: E501
+        )
+        plot_col[x] = link_html
     return plot_col
 
 
