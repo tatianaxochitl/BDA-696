@@ -64,14 +64,10 @@ def main():
         "away_pitcher",
     ]
     reduced_predictor_list = [
-        "home_team_id",
-        "away_team_id",
-        "away_BA",
         "away_BABIP",
         "away_OBP",
         "away_xFIP",
         "away_ERA",
-        "home_BA",
         "home_BABIP",
         "home_OBP",
         "home_xFIP",
@@ -80,7 +76,6 @@ def main():
         "away_pitcher",
     ]
 
-    print(baseball_df.info(verbose=True))
     hmtl = process_dataframe(  # noqa: F841
         baseball_df, reduced_predictor_list, "result"
     )
