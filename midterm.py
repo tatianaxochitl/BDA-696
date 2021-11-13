@@ -920,14 +920,16 @@ def cat_cat_dwm(df: pd.DataFrame, pred1: str, pred2: str, response: str):
 
 def make_html_link(plot_col: pd.Series):
     # regex for making link text
-    if pd.isnull(plot_col):
-        return plot_col
-
     regex = ".+/([^/]+).html$"
     for x in range(len(plot_col)):
-        text = re.findall(regex, plot_col[x])
-        link_html = f'<a target="_blank" href="{plot_col[x]}">{text[0]}</a>'
-        plot_col[x] = link_html
+        if np.nan(plot_col[x]):
+            plot_col[x] = ""
+        else:
+            text = re.findall(regex, plot_col[x])
+            link_html = (
+                f'<a target="_blank" href="{plot_col[x]}">{text[0]}</a>'  # noqa: E501
+            )
+            plot_col[x] = link_html
     return plot_col
 
 
