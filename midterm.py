@@ -296,8 +296,8 @@ def process_dataframe(
 
     all_pred_df["Response Plot"] = make_html_link(all_pred_df["Response Plot"])
 
-    all_pred_df["Response Plot 1"] = make_html_link(
-        all_pred_df["Response Plot 1"]
+    all_pred_df["Response Plot 2"] = make_html_link(
+        all_pred_df["Response Plot 2"]
     )  # noqa: E501
 
     cont_cont_df["Linear Regression Plot"] = make_html_link(
