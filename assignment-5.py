@@ -1,6 +1,10 @@
 import sys
 
 from pyspark.sql import SparkSession
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
+from sklearn.svm import SVC
 
 from midterm import process_dataframe
 
@@ -76,9 +80,38 @@ def main():
         "away_pitcher",
     ]
 
-    hmtl = process_dataframe(  # noqa: F841
-        baseball_df, reduced_predictor_list, "result"
+    process_dataframe(baseball_df, reduced_predictor_list, "result")  # noqa: E501
+
+    # make cat into cont
+    baseball_df[["home_pitcher", "away_pitcher"]] = baseball_df[
+        ["home_pitcher", "away_pitcher"]
+    ].astype(  # noqa: E501
+        float
     )
+
+    # Modeling
+    train, test = train_test_split(
+        baseball_df, test_size=0.33, random_state=42
+    )  # noqa: F501
+
+    train_x, train_y = train[reduced_predictor_list], train["result"]
+    test_x, test_y = test[reduced_predictor_list], test["result"]
+
+    # Logistic Regression
+    logreg_clf = LogisticRegression()
+    logreg_clf.fit(train_x, train_y)
+    log_prediction = logreg_clf.predict(test_x)
+
+    # SVC
+    SVC_model = SVC()
+    SVC_model.fit(train_x, train_y)
+    SVC_prediction = SVC_model.predict(test_x)
+
+    print(
+        f"Logistic Regression Accuracy Score: {accuracy_score(log_prediction, test_y)}"  # noqa: E501
+    )
+    print(f"SVC Accuracy Score: {accuracy_score(SVC_prediction, test_y)}")
+    # logistic regression performs slightly better
 
 
 if __name__ == "__main__":

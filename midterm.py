@@ -378,8 +378,8 @@ def process_dataframe(
     """
     page.write(footer)
 
-    webbrowser.open(f"midterm_analysis_{tag}.html", new=2)
-    return f"midterm_analysis_{tag}.html"
+    webbrowser.open(f"assignment5_analysis_{tag}.html", new=2)
+    return
 
 
 # make categorical vs categorical graph
@@ -714,7 +714,7 @@ def cont_cont_dwm(
     )
 
     fig_2.update_layout(
-        title_text=f"{pred1} & {pred2} Bin Average",
+        title_text=f"{pred1} & {pred2} Bin Average Residual",
         xaxis=dict(tickmode="array", tickvals=np.around(pred2_edges, 3)),
         yaxis=dict(tickmode="array", tickvals=np.around(pred1_edges, 3)),
     )
