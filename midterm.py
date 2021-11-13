@@ -920,7 +920,7 @@ def cat_cat_dwm(df: pd.DataFrame, pred1: str, pred2: str, response: str):
 
 def make_html_link(plot_col: pd.Series):
     # regex for making link text
-    if plot_col == "":
+    if pd.isnull(plot_col):
         return plot_col
 
     regex = ".+/([^/]+).html$"
