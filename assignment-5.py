@@ -70,12 +70,6 @@ def main():
     reduced_predictor_list = [
         "away_BABIP",
         "away_OBP",
-        "away_xFIP",
-        "away_ERA",
-        "home_BABIP",
-        "home_OBP",
-        "home_xFIP",
-        "home_ERA",
         "home_pitcher",
         "away_pitcher",
     ]
