@@ -2,7 +2,7 @@
 ALTER TABLE inning MODIFY COLUMN game_id INT UNSIGNED NOT NULL;
 
 -- create historic batting average, BABIP, OBP 
-CREATE TEMPORARY TABLE historic_bat_avg( 
+CREATE TABLE IF NOT EXISTS historic_bat_avg( 
     SELECT
             batter
             , ROUND(SUM(Hit)/NULLIF(SUM(atBat),0),3) AS historicBattingAverage
@@ -13,7 +13,7 @@ CREATE TEMPORARY TABLE historic_bat_avg(
 );
 
 -- create table for avg of lineup
-CREATE TEMPORARY TABLE line_up_temp(
+CREATE TABLE IF NOT EXISTS line_up_temp(
     SELECT
             l.game_id
             ,l.team_id
@@ -26,7 +26,7 @@ CREATE TEMPORARY TABLE line_up_temp(
 );
 
 -- Find League stats 
-CREATE TEMPORARY TABLE league_stats(
+CREATE TABLE IF NOT EXISTS league_stats(
     SELECT 
         t.league
         , ROUND(((SUM(toBase)/SUM(endingInning - startingInning + 1)) * 9),3) AS lgERA
@@ -40,7 +40,7 @@ CREATE TEMPORARY TABLE league_stats(
     GROUP BY t.league
 );
 
-CREATE TEMPORARY TABLE FIP_constants(
+CREATE TABLE IF NOT EXISTS FIP_constants(
     SELECT league
         ,(lgERA - ((13*lgHR + 3*lgBB - 2*lgK)/lgIP)) AS C
         , lgHRFB
@@ -48,7 +48,7 @@ CREATE TEMPORARY TABLE FIP_constants(
 ); 
 
 -- Make Junction table
-CREATE TEMPORARY TABLE FIP_constants_junt(
+CREATE TABLE IF NOT EXISTS FIP_constants_junt(
     SELECT f.league
         ,t.team_id
         , C
@@ -58,7 +58,7 @@ CREATE TEMPORARY TABLE FIP_constants_junt(
 );
 
 -- table for pitcher stats K/9, BB/9, FIP, xFIP, ERA
-CREATE TEMPORARY TABLE pitcher_temp(
+CREATE TABLE IF NOT EXISTS pitcher_temp(
     SELECT
         p.pitcher
         , ROUND(((SUM(p.Strikeout)/SUM(p.endingInning - p.startingInning + 1)) * 9),3) AS K9
@@ -72,7 +72,7 @@ CREATE TEMPORARY TABLE pitcher_temp(
 );
 
 
-CREATE TEMPORARY TABLE results_table(
+CREATE TABLE IF NOT EXISTS results_table(
     SELECT
         game_id
         , CASE WHEN win_lose="L" THEN 'FALSE' ELSE 'TRUE' END AS result
@@ -81,7 +81,7 @@ CREATE TEMPORARY TABLE results_table(
 );
 
 -- home team stats table
-CREATE TEMPORARY TABLE home_team_stats(
+CREATE TABLE IF NOT EXISTS home_team_stats(
     SELECT
         g.game_id
         , l.team_id
@@ -100,7 +100,7 @@ CREATE TEMPORARY TABLE home_team_stats(
 );
 
 -- away team stats table
-CREATE TEMPORARY TABLE away_team_stats(
+CREATE TABLE IF NOT EXISTS away_team_stats(
     SELECT
         g.game_id
         , l.team_id

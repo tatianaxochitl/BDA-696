@@ -1,5 +1,5 @@
+import numpy as np
 import pandas as pd
-import pandas as np
 import plotly.express as px
 import statsmodels.api
 from plotly import figure_factory as ff

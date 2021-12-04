@@ -7,7 +7,6 @@ import webbrowser
 
 import numpy as np
 import pandas as pd
-import plotly.express as px
 from pandas.core.dtypes.common import (
     is_bool_dtype,
     is_categorical_dtype,
@@ -16,6 +15,7 @@ from pandas.core.dtypes.common import (
     is_string_dtype,
 )
 from plotly import graph_objects as go
+from plotly.subplots import make_subplots
 from scipy import stats
 from sklearn.ensemble import RandomForestClassifier
 
@@ -299,26 +299,31 @@ def process_dataframe(
 
     all_pred_df["Response Plot"] = make_html_link(all_pred_df["Response Plot"])
 
-    cont_cont_df["Linear Regression Plot"] = make_html_link(
-        cont_cont_df["Linear Regression Plot"]
-    )
-    cont_cont_diff["Bin Plot"] = make_html_link(cont_cont_diff["Bin Plot"])
-    cont_cont_diff["Residual Plot"] = make_html_link(
-        cont_cont_diff["Residual Plot"]
-    )  # noqa: E80
-    cont_cat_df["Violin Plot"] = make_html_link(cont_cat_df["Violin Plot"])
-    cont_cat_df["Distribution Plot"] = make_html_link(
-        cont_cat_df["Distribution Plot"]
-    )  # noqa: E80
-    cont_cat_diff["Bin Plot"] = make_html_link(cont_cat_diff["Bin Plot"])
-    cont_cat_diff["Residual Plot"] = make_html_link(
-        cont_cat_diff["Residual Plot"]
-    )  # noqa: E80
-    cat_cat_df["Heatmap"] = make_html_link(cat_cat_df["Heatmap"])
-    cat_cat_diff["Bin Plot"] = make_html_link(cat_cat_diff["Bin Plot"])
-    cat_cat_diff["Residual Plot"] = make_html_link(
-        cat_cat_diff["Residual Plot"]
-    )  # noqa: E80
+    if len(cont_list) != 0:
+        cont_cont_df["Linear Regression Plot"] = make_html_link(
+            cont_cont_df["Linear Regression Plot"]
+        )
+        cont_cont_diff["Bin Plot"] = make_html_link(cont_cont_diff["Bin Plot"])
+        cont_cont_diff["Residual Plot"] = make_html_link(
+            cont_cont_diff["Residual Plot"]
+        )  # noqa: E80
+
+    if len(cont_list) != 0 and len(cat_list) != 0:
+        cont_cat_df["Violin Plot"] = make_html_link(cont_cat_df["Violin Plot"])
+        cont_cat_df["Distribution Plot"] = make_html_link(
+            cont_cat_df["Distribution Plot"]
+        )  # noqa: E80
+        cont_cat_diff["Bin Plot"] = make_html_link(cont_cat_diff["Bin Plot"])
+        cont_cat_diff["Residual Plot"] = make_html_link(
+            cont_cat_diff["Residual Plot"]
+        )  # noqa: E80
+
+    if len(cat_list) != 0:
+        cat_cat_df["Heatmap"] = make_html_link(cat_cat_df["Heatmap"])
+        cat_cat_diff["Bin Plot"] = make_html_link(cat_cat_diff["Bin Plot"])
+        cat_cat_diff["Residual Plot"] = make_html_link(
+            cat_cat_diff["Residual Plot"]
+        )  # noqa: E80
 
     # create html file
     tag = "".join(random.choices(string.ascii_uppercase + string.digits, k=5))
@@ -331,45 +336,50 @@ def process_dataframe(
     </head>
     <body>
     <h1>Predictor Analysis</h1>
-    <h2>Continous/Continous Predictor Pairs</h2>
     """
     page.write(header)
-    page.write("<h3>Predictor Ranking</h3>")
+    page.write("<h2>Predictor Ranking</h2>")
     page.write(
         all_pred_df.to_html(escape=False, index=False, justify="center")
     )  # noqa: E501
-    page.write("<h3>Correlation Table</h3>")
-    page.write(
-        cont_cont_df.to_html(escape=False, index=False, justify="center")
-    )  # noqa: E501
-    page.write("<h3>Correlation Matrix</h3>")
-    page.write(make_heatmap_html(cont_cont_corr_matrix))
-    page.write('<h3>"Brute Force" Table</h3>')
-    page.write(
-        cont_cont_diff.to_html(escape=False, index=False, justify="center")
-    )  # noqa: E501
-    page.write("<h2>Continous/Categorical Predictor Pairs</h2>")
-    page.write("<h3>Correlation Table</h3>")
-    page.write(
-        cont_cat_df.to_html(escape=False, index=False, justify="center")
-    )  # noqa: E501
-    page.write("<h3>Correlation Matrix</h3>")
-    page.write(make_heatmap_html(cont_cat_corr_matrix))
-    page.write('<h3>"Brute Force" Table</h3>')
-    page.write(
-        cont_cat_diff.to_html(escape=False, index=False, justify="center")
-    )  # noqa: E501
-    page.write("<h2>Categorical/Categorical Predictor Pairs</h2>")
-    page.write("<h3>Correlation Table</h3>")
-    page.write(
-        cat_cat_df.to_html(escape=False, index=False, justify="center")
-    )  # noqa: E501
-    page.write("<h3>Correlation Matrix</h3>")
-    page.write(make_heatmap_html(cat_cat_corr_matrix))
-    page.write('<h3>"Brute Force" Table</h3>')
-    page.write(
-        cat_cat_diff.to_html(escape=False, index=False, justify="center")
-    )  # noqa: E501
+    if len(cont_list) != 0:
+        page.write("<h2>Continous/Continous Predictor Pairs</h2>")
+        page.write("<h3>Correlation Table</h3>")
+        page.write(
+            cont_cont_df.to_html(escape=False, index=False, justify="center")
+        )  # noqa: E501
+        page.write("<h3>Correlation Matrix</h3>")
+        page.write(make_heatmap_html(cont_cont_corr_matrix))
+        page.write('<h3>"Brute Force" Table</h3>')
+        page.write(
+            cont_cont_diff.to_html(escape=False, index=False, justify="center")
+        )  # noqa: E501
+
+    if len(cont_list) != 0 and len(cat_list) != 0:
+        page.write("<h2>Continous/Categorical Predictor Pairs</h2>")
+        page.write("<h3>Correlation Table</h3>")
+        page.write(
+            cont_cat_df.to_html(escape=False, index=False, justify="center")
+        )  # noqa: E501
+        page.write("<h3>Correlation Matrix</h3>")
+        page.write(make_heatmap_html(cont_cat_corr_matrix))
+        page.write('<h3>"Brute Force" Table</h3>')
+        page.write(
+            cont_cat_diff.to_html(escape=False, index=False, justify="center")
+        )  # noqa: E501
+
+    if len(cat_list) != 0:
+        page.write("<h2>Categorical/Categorical Predictor Pairs</h2>")
+        page.write("<h3>Correlation Table</h3>")
+        page.write(
+            cat_cat_df.to_html(escape=False, index=False, justify="center")
+        )  # noqa: E501
+        page.write("<h3>Correlation Matrix</h3>")
+        page.write(make_heatmap_html(cat_cat_corr_matrix))
+        page.write('<h3>"Brute Force" Table</h3>')
+        page.write(
+            cat_cat_diff.to_html(escape=False, index=False, justify="center")
+        )  # noqa: E501
 
     footer = """<p>BDA696 Midterm, Fall 2021, by Tatiana Chavez</p>
     </body>
@@ -411,21 +421,30 @@ def cont_dwm(pandas_df, predictor, response):
     wmdsq = pop_prop * mdsq
     msd = np.nansum(mdsq) / 10
     wmsd = np.sum(wmdsq)
+    pop_mean_list = [pop_mean] * 10
 
-    fig = px.scatter(
-        x=edge_centers,
-        y=mean_diff,
-        color=px.Constant("$\u03BC_{i}$ - $\u03BC_{pop}$"),
-        labels=dict(x="Predictor Bin", y="response"),
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
+
+    fig.add_trace(
+        go.Scatter(
+            x=edge_centers,
+            y=mean_diff,
+            name="$\\mu_{i}$ - $\\mu_{pop}$",
+            mode="lines+markers",
+        ),
+        secondary_y=False,
     )
-    fig.add_bar(x=edge_centers, y=count, name="Population")
-    fig.add_shape(
-        type="line",
-        x0=edges[0],
-        y0=pop_mean,
-        x1=edges[-1],
-        y1=pop_mean,
-        name="$\u03BC_{pop}$",
+
+    fig.add_trace(
+        go.Bar(x=edge_centers, y=count, name="Population"), secondary_y=True
+    )  # noqa: E501
+    fig.add_trace(
+        go.Scatter(
+            y=pop_mean_list,
+            x=edge_centers,
+            mode="lines",
+            name="$\\mu_{pop}$",
+        )
     )
 
     filename = f"plots/{predictor}_{response}_dwm.html"
@@ -449,23 +468,34 @@ def cat_dwm(pandas_df, predictor, response):
     mdsq = mean_diff ** 2
     pop_prop = count.values / len(pandas_df[response])
     wmdsq = pop_prop * mdsq
-    msd = np.nansum(mdsq) / 10
+    msd = np.nansum(mdsq) / len(categories)
     wmsd = np.nansum(wmdsq)
 
-    fig = px.scatter(
-        x=categories,
-        y=mean_diff.flatten(),
-        color=px.Constant("$\u03BC_{i}$ - $\u03BC_{pop}$"),
-        labels=dict(x="Predictor Bin", y="response"),
+    pop_mean_list = [pop_mean] * len(categories)
+
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
+
+    fig.add_trace(
+        go.Scatter(
+            x=categories,
+            y=mean_diff.flatten(),
+            name="$\\mu_{i}$ - $\\mu_{pop}$",
+            mode="lines+markers",
+        ),
+        secondary_y=False,
     )
-    fig.add_bar(x=categories, y=count.values, name="Population")
-    fig.add_shape(
-        type="line",
-        x0=categories[0],
-        y0=pop_mean,
-        x1=categories[1],
-        y1=pop_mean,
-        name="$\u03BC_{pop}$",
+
+    fig.add_trace(
+        go.Bar(x=categories, y=count.values, name="Population"),
+        secondary_y=True,  # noqa: E501
+    )
+    fig.add_trace(
+        go.Scatter(
+            y=pop_mean_list,
+            x=categories,
+            mode="lines",
+            name="$\\mu_{pop}$",
+        )
     )
 
     filename = f"plots/{predictor}_{response}_dwm.html"
