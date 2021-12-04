@@ -10,7 +10,8 @@ ENV PYTHONUNBUFFERED=1
 # Install pip requirements
 COPY requirements.txt .
 RUN python3 -m pip install --upgrade pip
-RUN sudo apt-get install libmariadb3 libmariadb-dev
+RUN apt-get update\
+    && apt-get install -y libmariadb3 libmariadb-dev
 RUN python3 -m pip install -r requirements.txt
 
 WORKDIR /app
@@ -20,6 +21,10 @@ COPY . /app
 # For more info, please refer to https://aka.ms/vscode-docker-python-configure-containers
 RUN adduser -u 5678 --disabled-password --gecos "" appuser && chown -R appuser /app
 USER appuser
+
+#
+RUN mysqld_safe && script_runner.sh
+
 
 # During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
 CMD ["python3", "assignment-5.py"]
