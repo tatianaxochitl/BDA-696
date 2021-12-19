@@ -10,10 +10,11 @@ services:
   maria_db:
     image: mariadb
     restart: on-failure
+    ports:
+      - 8083:3306
     environment:
       MYSQL_USER: root
       MYSQL_PASSWORD: root # pragma: allowlist secret
-      MYSQL_DATABASE: baseball
       MYSQL_ROOT_PASSWORD: root # pragma: allowlist secret
     volumes:
       - ${PWD}/mariadb:/var/lib/mysql

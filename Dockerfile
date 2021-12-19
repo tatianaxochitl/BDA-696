@@ -1,5 +1,4 @@
-# For more information, please refer to https://aka.ms/vscode-docker-python
-FROM python:3.8-slim-buster
+FROM python:3.8
 
 # Keeps Python from generating .pyc files in the container
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -9,22 +8,10 @@ ENV PYTHONUNBUFFERED=1
 
 # Install pip requirements
 COPY requirements.txt .
-RUN python3 -m pip install --upgrade pip
-RUN apt-get update\
-    && apt-get install -y libmariadb3 libmariadb-dev
-RUN python3 -m pip install -r requirements.txt
-
-WORKDIR /app
-COPY . /app
 
 # Creates a non-root user with an explicit UID and adds permission to access the /app folder
 # For more info, please refer to https://aka.ms/vscode-docker-python-configure-containers
 RUN adduser -u 5678 --disabled-password --gecos "" appuser && chown -R appuser /app
 USER appuser
 
-#
-RUN mysqld_safe && script_runner.sh
-
-
-# During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
-CMD ["python3", "assignment-5.py"]
+ENTRYPOINT ["/the_bash_script.sh"]
