@@ -30,3 +30,11 @@
 1. Make sure that Baseball database is set up (not altered if altered edit out line 2 of assignment-1.sql )
 2. Sign into database `mysql -u [username] -p [baseball database]`
 3. type `source assignement-2.sql` (note: takes a while to run the file...)
+
+# Midterm Instructions
+
+- install new requirements.txt before following instructions
+
+1. Use testing-data.py to test the datasets, you can add your own as well.
+2. The .html file should save as midterm*analysis*{5CAPS}.html
+3. Open the file to look at the results
