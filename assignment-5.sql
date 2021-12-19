@@ -1,46 +1,49 @@
 -- lets fix the column type issue on it.
 ALTER TABLE inning MODIFY COLUMN game_id INT UNSIGNED NOT NULL;
 
--- create historic batting average, BABIP, OBP 
-CREATE TEMPORARY TABLE historic_bat_avg( 
+-- create for every entry batting average, BABIP, OBP 
+CREATE TABLE IF NOT EXISTS bat_avg1( 
     SELECT
-            batter
-            , ROUND(SUM(Hit)/NULLIF(SUM(atBat),0),3) AS historicBattingAverage
-            , ROUND(SUM(Hit - Home_Run)/NULLIF(SUM(atBat - Strikeout - Home_Run + Sac_Fly),0),3) AS historicBABIP
-            , ROUND(SUM(Hit + Walk + Home_Run)/NULLIF(SUM(atBat + Walk + Hit_By_Pitch + Sac_Fly),0),3) AS OBP
+            game_id
+            , team_id
+            , Hit/NULLIF(atBat,0) AS BattingAverage
+            , (Hit - Home_Run)/NULLIF((atBat - Strikeout - Home_Run + Sac_Fly),0) AS BABIP
+            , (Hit + Walk + Home_Run)/NULLIF((atBat + Walk + Hit_By_Pitch + Sac_Fly),0) AS OBP
     FROM batter_counts
-    GROUP BY batter
+    GROUP BY game_id, team_id
+    ORDER BY game_id, team_id
 );
 
--- create table for avg of lineup
-CREATE TEMPORARY TABLE line_up_temp(
+
+CREATE TABLE IF NOT EXISTS bat_avg2( 
     SELECT
-            l.game_id
-            ,l.team_id
-            , AVG(historicBattingAverage) AS BA
-            , AVG(historicBABIP) AS BABIP
-            , AVG(OBP) AS OBP
-    FROM historic_bat_avg hba
-        JOIN lineup l ON hba.batter = l.player_id
-    GROUP BY l.team_id, l.game_id
+            game_id
+            , team_id
+            , AVG(BattingAverage) OVER(PARTITION BY team_id ORDER BY game_id ROWS BETWEEN 5 PRECEDING AND 1 PRECEDING ) AS BA
+            , AVG(BABIP) OVER(PARTITION BY team_id ORDER BY game_id ROWS BETWEEN 5 PRECEDING AND 1 PRECEDING ) AS BABIP
+            , AVG(OBP) OVER(PARTITION BY team_id ORDER BY game_id ROWS BETWEEN 5 PRECEDING AND 1 PRECEDING ) AS OBP
+    FROM bat_avg1 
+    ORDER BY game_id, team_id
 );
 
 -- Find League stats 
-CREATE TEMPORARY TABLE league_stats(
+-- Doing Historic cuz im lazy... 
+-- Also not exactly accurate way to get ERA but gives similar number :-)
+CREATE TABLE IF NOT EXISTS league_stats(
     SELECT 
         t.league
-        , ROUND(((SUM(toBase)/SUM(endingInning - startingInning + 1)) * 9),3) AS lgERA
+        , ((SUM((atBat - outsPlayed)/2)/SUM(endingInning - startingInning + 1)) * 9) AS lgERA
         , SUM(Home_Run) AS lgHR
         , SUM(Walk) AS lgBB
         , SUM(Strikeout) AS lgK
         , SUM(endingInning - startingInning + 1) AS lgIP
-        , SUM((Fly_Out + Flyout)/NULLIF(Home_Run,0)) AS lgHRFB
+        , AVG(COALESCE((Home_Run/NULLIF((Fly_Out + Flyout),0)),0)) AS lgHRFB
     FROM pitcher_counts p
         JOIN team t ON p.team_id = t.team_id
     GROUP BY t.league
 );
 
-CREATE TEMPORARY TABLE FIP_constants(
+CREATE TABLE IF NOT EXISTS FIP_constants(
     SELECT league
         ,(lgERA - ((13*lgHR + 3*lgBB - 2*lgK)/lgIP)) AS C
         , lgHRFB
@@ -48,8 +51,9 @@ CREATE TEMPORARY TABLE FIP_constants(
 ); 
 
 -- Make Junction table
-CREATE TEMPORARY TABLE FIP_constants_junt(
+CREATE TABLE IF NOT EXISTS FIP_constants_junt(
     SELECT f.league
+        , t.division
         ,t.team_id
         , C
         , lgHRFB
@@ -57,22 +61,61 @@ CREATE TEMPORARY TABLE FIP_constants_junt(
         JOIN team t ON f.league = t.league
 );
 
--- table for pitcher stats K/9, BB/9, FIP, xFIP, ERA
-CREATE TEMPORARY TABLE pitcher_temp(
+-- table for pitcher stats K/9, BB/9, FIP, xFIP, ERA, WHIP
+CREATE TABLE IF NOT EXISTS pitcher_temp1(
     SELECT
-        p.pitcher
-        , ROUND(((SUM(p.Strikeout)/SUM(p.endingInning - p.startingInning + 1)) * 9),3) AS K9
-        , ROUND(((SUM(p.Walk)/SUM(p.endingInning - p.startingInning + 1)) * 9),3) AS BB9
-        , ROUND((((13*SUM(p.Home_Run) + 3*SUM(p.Walk) - 2*SUM(p.Strikeout))/SUM(p.endingInning - p.startingInning + 1)) + f.C),3) AS FIP
-        , ROUND((((13*SUM(p.Fly_Out + p.Flyout)*f.lgHRFB + 3*SUM(p.Walk) - 2*SUM(p.Strikeout))/SUM(p.endingInning - p.startingInning + 1)) + f.C),3) AS xFIP
-        , ROUND(((SUM(p.toBase)/SUM(p.endingInning - p.startingInning + 1)) * 9),3) AS ERA
+        p.game_id
+        , p.team_id
+        , p.pitcher
+        , p.endingInning - p.startingInning + 1 AS IP
+        , ((p.Strikeout/(p.endingInning - p.startingInning + 1)) * 9) AS K9
+        , ((p.Walk/(p.endingInning - p.startingInning + 1)) * 9) AS BB9
+        , (((13*(p.Home_Run) + 3*(p.Walk) - 2*(p.Strikeout))/(p.endingInning - p.startingInning + 1)) + f.C) AS FIP
+        , (((13*(p.Fly_Out + p.Flyout)*f.lgHRFB + 3*(p.Walk) - 2*(p.Strikeout))/(p.endingInning - p.startingInning + 1)) + f.C) AS xFIP
+        , ((((p.atBat - p.outsPlayed)/2)/(p.endingInning - p.startingInning + 1)) * 9) AS ERA
+        , (p.Walk + p.Hit) / (p.endingInning - p.startingInning + 1) AS WHIP
+        , f.league
+        , f.division
     FROM pitcher_counts p
         JOIN FIP_constants_junt f ON p.team_id = f.team_id
-    GROUP BY p.pitcher
+    ORDER BY p.game_id, p.pitcher
+);
+
+CREATE TABLE IF NOT EXISTS pitcher_temp2(
+    SELECT
+        game_id
+        , team_id
+        , SUM(K9 * IP)/SUM(IP) AS K9
+        , SUM(BB9 * IP)/SUM(IP) AS BB9
+        , SUM(FIP * IP)/SUM(IP) AS FIP
+        , SUM(xFIP * IP)/SUM(IP) AS xFIP
+        , SUM(ERA * IP)/SUM(IP) AS ERA
+        , SUM(WHIP * IP)/SUM(IP) AS WHIP
+        , league
+        , division
+    FROM pitcher_temp1
+    GROUP BY team_id, game_id
+    ORDER BY game_id, team_id
+);
+
+CREATE TABLE IF NOT EXISTS pitcher_temp3(
+    SELECT
+        game_id
+        , team_id
+        , AVG(K9) OVER(PARTITION BY team_id ORDER BY game_id ROWS BETWEEN 50 PRECEDING AND 1 PRECEDING ) AS K9
+        , AVG(BB9) OVER(PARTITION BY team_id ORDER BY game_id ROWS BETWEEN 50 PRECEDING AND 1 PRECEDING ) AS BB9
+        , AVG(FIP) OVER(PARTITION BY team_id ORDER BY game_id ROWS BETWEEN 50 PRECEDING AND 1 PRECEDING ) AS FIP
+        , AVG(xFIP) OVER(PARTITION BY team_id ORDER BY game_id ROWS BETWEEN 50 PRECEDING AND 1 PRECEDING ) AS xFIP
+        , AVG(ERA) OVER(PARTITION BY team_id ORDER BY game_id ROWS BETWEEN 50 PRECEDING AND 1 PRECEDING ) AS ERA
+        , AVG(WHIP) OVER(PARTITION BY team_id ORDER BY game_id ROWS BETWEEN 50 PRECEDING AND 1 PRECEDING ) AS WHIP
+        , league
+        , division 
+    FROM pitcher_temp2
+    ORDER BY game_id, team_id
 );
 
 
-CREATE TEMPORARY TABLE results_table(
+CREATE TABLE IF NOT EXISTS results_table(
     SELECT
         game_id
         , CASE WHEN win_lose="L" THEN 'FALSE' ELSE 'TRUE' END AS result
@@ -81,7 +124,7 @@ CREATE TEMPORARY TABLE results_table(
 );
 
 -- home team stats table
-CREATE TEMPORARY TABLE home_team_stats(
+CREATE TABLE IF NOT EXISTS home_team_stats(
     SELECT
         g.game_id
         , l.team_id
@@ -93,14 +136,17 @@ CREATE TEMPORARY TABLE home_team_stats(
         , p.FIP as home_FIP
         , p.xFIP as home_xFIP
         , p.ERA as home_ERA
+        , p.WHIP as home_WHIP
+        , p.league as home_league
+        , p.division as home_division
 
     FROM game g
-        JOIN line_up_temp l ON g.game_id = l.game_id AND g.home_team_id = l.team_id
-        JOIN pitcher_temp p ON g.home_pitcher = p.pitcher
+        JOIN bat_avg2 l ON g.game_id = l.game_id AND g.home_team_id = l.team_id
+        JOIN pitcher_temp3 p ON g.game_id = p.game_id AND g.home_team_id = p.team_id
 );
 
 -- away team stats table
-CREATE TEMPORARY TABLE away_team_stats(
+CREATE TABLE IF NOT EXISTS away_team_stats(
     SELECT
         g.game_id
         , l.team_id
@@ -112,14 +158,17 @@ CREATE TEMPORARY TABLE away_team_stats(
         , p.FIP as away_FIP
         , p.xFIP as away_xFIP
         , p.ERA as away_ERA
+        , p.WHIP as away_WHIP
+        , p.league as away_league
+        , p.division as away_division
 
     FROM game g
-        JOIN line_up_temp l ON g.game_id = l.game_id AND g.away_team_id = l.team_id
-        JOIN pitcher_temp p ON g.away_pitcher = p.pitcher
+        JOIN bat_avg2 l ON g.game_id = l.game_id AND g.away_team_id = l.team_id
+        JOIN pitcher_temp3 p ON g.game_id = p.game_id AND g.away_team_id = p.team_id
 );
 
 -- Join all the stats i made into one table plus other features 
-CREATE OR REPLACE TABLE predictive_table(
+CREATE TABLE IF NOT EXISTS predictive_table(
     SELECT
         g.game_id
         , g.home_team_id
@@ -132,6 +181,9 @@ CREATE OR REPLACE TABLE predictive_table(
         , a.away_FIP
         , a.away_xFIP
         , a.away_ERA
+        , a.away_WHIP
+        , a.away_league
+        , a.away_division
         , h.home_BA
         , h.home_BABIP
         , h.home_OBP
@@ -140,8 +192,9 @@ CREATE OR REPLACE TABLE predictive_table(
         , h.home_FIP
         , h.home_xFIP
         , h.home_ERA
-        , g.home_pitcher
-        , g.away_pitcher
+        , h.home_WHIP
+        , h.home_league
+        , h.home_division
         , r.result
     FROM game g
         JOIN away_team_stats a ON g.game_id = a.game_id AND g.away_team_id = a.team_id

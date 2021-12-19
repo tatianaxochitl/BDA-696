@@ -1,0 +1,19 @@
+version: "3.4"
+
+services:
+  bda696:
+    image: bda696
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+
+  maria_db:
+    image: mariadb
+    restart: on-failure
+    environment:
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root # pragma: allowlist secret
+      MYSQL_DATABASE: baseball
+      MYSQL_ROOT_PASSWORD: root # pragma: allowlist secret
+    volumes:
+      - ${PWD}/mariadb:/var/lib/mysql

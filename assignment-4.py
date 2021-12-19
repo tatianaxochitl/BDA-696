@@ -7,7 +7,6 @@ import plotly.figure_factory as ff
 import plotly.graph_objects as go
 import statsmodels.api
 from plotly import express as px
-from plotly.subplots import make_subplots
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
 
@@ -109,8 +108,6 @@ def create_table(df, p_column, p_types, r_column, r_types):
                 {COL_OPEN}{pc}</div>
         """
         if pt == "categorical":
-            tbl_column = cat_graph(df, pc)
-            tbl_row = "\n".join([tbl_row, tbl_column])
             for rt, rc in r_types, r_column:
                 if rt == "boolean":
                     tbl_column = conf_mx(df, pc, rc)
@@ -151,45 +148,6 @@ def create_table(df, p_column, p_types, r_column, r_types):
     CONT_PRED["RFC Importance"] = importances.tolist()
 
     return tbl
-
-
-# make graphs just looking at the categorical predictor
-def cat_graph(pandas_df, predictor):
-    fig = make_subplots(
-        rows=1,
-        cols=2,
-        specs=[
-            [
-                {"type": "xy"},
-                {"type": "domain"},
-            ]
-        ],
-    )
-    fig.add_trace(
-        go.Bar(
-            pandas_df[predictor],
-            x=pandas_df[predictor].value_counts().index,
-            y=pandas_df[predictor].value_counts(),
-        ),
-        row=1,
-        col=1,
-    )
-
-    fig.add_trace(
-        go.Pie(
-            pandas_df[predictor],
-            values=pandas_df[predictor].value_counts(),
-            names=pandas_df[predictor].value_counts().index,
-        ),
-        row=1,
-        col=2,
-    )
-
-    fig.write_image(f"plots/{pandas_df}_{predictor}_cat_graph.png")
-
-    filename = f"{pandas_df}_{predictor}_cat_graph.png"
-    col = f'    {COL_OPEN}<a href="plots/{filename}">{predictor} Plots</a></div>'  # noqa: E501
-    return col
 
 
 def conf_mx(pandas_df, predictor, response):
