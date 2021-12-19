@@ -155,6 +155,20 @@ def process_dataframe(
     )
     rf = rf_importance(pandas_df, cont_list, response_column)
     i = 0
+
+    for pred in cat_list:
+        # ranking and plots for cat
+        file1, msd, wmsd = cat_dwm(pandas_df, pred, response_column)
+        file2 = heat_mx(pandas_df, pred, response_column)
+        new_row = {
+            "Predictor": pred,
+            "Difference of Mean Response": msd,
+            "Weighted Difference of Mean Response": wmsd,
+            "Bin Plot": file1,
+            "Response Plot": file2,
+        }
+        all_pred_df = all_pred_df.append(new_row, ignore_index=True)
+
     for pred1 in cont_list:
         # ranking and plots for cont
         p_value, t_value = logistic_regression(
@@ -175,17 +189,6 @@ def process_dataframe(
         all_pred_df = all_pred_df.append(new_row, ignore_index=True)
         i += 1
         for pred2 in cat_list:
-            # ranking and plots for cat
-            file1, msd, wmsd = cat_dwm(pandas_df, pred2, response_column)
-            file2 = heat_mx(pandas_df, pred2, response_column)
-            new_row = {
-                "Predictor": pred2,
-                "Difference of Mean Response": msd,
-                "Weighted Difference of Mean Response": wmsd,
-                "Bin Plot": file1,
-                "Response Plot": file2,
-            }
-            all_pred_df = all_pred_df.append(new_row, ignore_index=True)
             # Plotting
             file1, file2 = cont_cat_graph(pandas_df, pred1, pred2)
             # Correlation Stats
@@ -292,6 +295,11 @@ def process_dataframe(
     )
     cat_cat_diff = cat_cat_diff.sort_values(
         by="Weighted Difference of Mean Response", ascending=False
+    )
+
+    # sort all by Random Forest Importance
+    all_pred_df = all_pred_df.sort_values(
+        by="Random Forest Importance", ascending=False
     )
 
     # make clickable links for all plots
