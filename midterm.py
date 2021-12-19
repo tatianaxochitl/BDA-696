@@ -327,7 +327,7 @@ def process_dataframe(
 
     # create html file
     tag = "".join(random.choices(string.ascii_uppercase + string.digits, k=5))
-    page = open(f"midterm_analysis_{tag}.html", "w")
+    page = open(f"predictor_analysis_{tag}.html", "w")
     header = f"""<!DOCTYPE html>
     <html>
     <head>

@@ -4,4 +4,6 @@ plotly
 scikit-learn
 seaborn
 statsmodels
-pyspark
+sqlalchemy
+mariadb
+pylatex
