@@ -2,6 +2,7 @@ import re
 import sys
 
 import pandas as pd
+import plotly.figure_factory as ff
 import plotly.graph_objects as go
 import sqlalchemy
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
@@ -9,6 +10,7 @@ from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     accuracy_score,
+    confusion_matrix,
     f1_score,
     precision_score,
     roc_auc_score,
@@ -427,6 +429,19 @@ def main():
             classifier=LogisticRegression(C=c),
         )
         make_line()
+
+    temp_pipe = Pipeline(
+        [("scaler", StandardScaler()), ("classifier", LogisticRegression())]
+    )
+    temp_pipe.fit(train_x, train_y)
+    pred_y = temp_pipe.predict(test_x)
+    z = confusion_matrix(test_y, pred_y)
+    fig = ff.create_annotated_heatmap(z)
+
+    fig.write_html(
+        f"plots/conf_matrix_logistic.html",
+        include_plotlyjs="cdn",
+    )
 
     sys.stdout.close()
 
