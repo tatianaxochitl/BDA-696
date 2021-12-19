@@ -20,6 +20,7 @@ from pandas.core.dtypes.common import (
 from plotly import figure_factory as ff
 from plotly import graph_objects as go
 from scipy import stats
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder
 
 
@@ -135,8 +136,51 @@ def process_dataframe(
             "Residual Plot",
         ]
     )
+    all_pred_df = pd.DataFrame(
+        columns=[
+            "Predictor",
+            "p-value",
+            "t-value",
+            "Random Forest Importance",
+            "Difference of Mean Response",
+            "Weighted Difference of Mean Response",
+            "Bin Plot",
+            "Response Plot",
+        ]
+    )
+    rf = rf_importance(pandas_df, cont_list, response_column)
+    i = 0
     for pred1 in cont_list:
+        # ranking and plots for cont
+        p_value, t_value = logistic_regression(
+            pandas_df, pred1, response_column
+        )  # noqa: E501
+        file1, msd, wmsd = cont_dwm(pandas_df, pred1, response_column)
+        file2, file3 = cont_cat_graph(pandas_df, pred1, response_column)
+        new_row = {
+            "Predictor": pred1,
+            "p-value": p_value,
+            "t-value": t_value,
+            "Random Forest Importance": rf[i],
+            "Difference of Mean Response": msd,
+            "Weighted Difference of Mean Response": wmsd,
+            "Bin Plot": file1,
+            "Response Plot": file2,
+        }
+        all_pred_df = all_pred_df.append(new_row, ignore_index=True)
+        i += 1
         for pred2 in cat_list:
+            # ranking and plots for cat
+            file1, msd, wmsd = cat_dwm(pandas_df, pred2, response_column)
+            file2 = heat_mx(pandas_df, pred2, response_column)
+            new_row = {
+                "Predictor": pred2,
+                "Difference of Mean Response": msd,
+                "Weighted Difference of Mean Response": wmsd,
+                "Bin Plot": file1,
+                "Response Plot": file2,
+            }
+            all_pred_df = all_pred_df.append(new_row, ignore_index=True)
             # Plotting
             file1, file2 = cont_cat_graph(pandas_df, pred1, pred2)
             # Correlation Stats
@@ -246,6 +290,10 @@ def process_dataframe(
     )
 
     # make clickable links for all plots
+    all_pred_df["Bin Plot"] = make_html_link(all_pred_df["Bin Plot"])
+
+    all_pred_df["Response Plot"] = make_html_link(all_pred_df["Response Plot"])
+
     cont_cont_df["Linear Regression Plot"] = make_html_link(
         cont_cont_df["Linear Regression Plot"]
     )
@@ -277,10 +325,14 @@ def process_dataframe(
         <title>Midterm</title>
     </head>
     <body>
-    <h1>Midterm</h1>
+    <h1>Predictor Analysis</h1>
     <h2>Continous/Continous Predictor Pairs</h2>
     """
     page.write(header)
+    page.write("<h3>Predictor Ranking</h3>")
+    page.write(
+        all_pred_df.to_html(escape=False, index=False, justify="center")
+    )  # noqa: E501
     page.write("<h3>Correlation Table</h3>")
     page.write(
         cont_cont_df.to_html(escape=False, index=False, justify="center")
@@ -320,7 +372,7 @@ def process_dataframe(
     """
     page.write(footer)
 
-    webbrowser.open(f"midterm_analysis_{tag}.html", new=2)
+    webbrowser.open(f"assignment5_analysis_{tag}.html", new=2)
     return
 
 
@@ -402,8 +454,8 @@ def cont_cat_graph(df, predictor, response):
     fig_1 = px.histogram(df, x=predictor, color=response, marginal="rug")
     fig_1.update_layout(
         title=f"{predictor} by {response}",
-        xaxis_title=response,
-        yaxis_title=predictor,
+        xaxis_title=predictor,
+        yaxis_title=response,
     )
 
     fig_1.write_html(
@@ -415,8 +467,8 @@ def cont_cat_graph(df, predictor, response):
 
     fig_2.update_layout(
         title=f"{response} by {predictor} ",
-        xaxis_title=response,
-        yaxis_title=predictor,
+        xaxis_title=predictor,
+        yaxis_title=response,
     )
 
     fig_2.write_html(
@@ -566,25 +618,8 @@ def make_heatmap_html(matrix: pd.DataFrame):
 def cont_cont_dwm(
     df: pd.DataFrame, pred1: str, pred2: str, response: str
 ):  # noqa: E501
-    pred1_edges = np.histogram_bin_edges(df[pred1], bins="sturges")
-    pred2_edges = np.histogram_bin_edges(df[pred2], bins="sturges")
-    hist, pred1_edges, pred2_edges = np.histogram2d(
-        df[pred1], df[pred2], [pred1_edges, pred2_edges]
-    )
-    bin_num1 = len(pred1_edges) - 1
-    bin_num2 = len(pred2_edges) - 1
-    total_bin = bin_num1 * bin_num2
-    nan_count = total_bin - np.count_nonzero(hist)
-    nan_percent = nan_count / total_bin
-    while nan_percent >= 0.5:
-        bin_num1 -= 1
-        bin_num2 -= 1
-        hist, pred1_edges, pred2_edges = np.histogram2d(
-            df[pred1], df[pred2], [bin_num1, bin_num2]
-        )
-        total_bin = bin_num1 * bin_num2
-        nan_count = total_bin - np.count_nonzero(hist)
-        nan_percent = nan_count / total_bin
+    pred1_edges = np.histogram_bin_edges(df[pred1], bins=10)
+    pred2_edges = np.histogram_bin_edges(df[pred2], bins=10)
 
     bin_mean, pred1_edges, pred2_edges, b = stats.binned_statistic_2d(
         df[pred1],
@@ -593,6 +628,7 @@ def cont_cont_dwm(
         statistic="mean",
         bins=(pred1_edges, pred2_edges),
     )
+
     bin_count, pred1_edges, pred2_edges, b = stats.binned_statistic_2d(
         df[pred1],
         df[pred2],
@@ -600,6 +636,7 @@ def cont_cont_dwm(
         statistic="count",
         bins=(pred1_edges, pred2_edges),
     )
+
     pop_mean = df[response].mean()
 
     # using later for graphs and also for calculations
@@ -671,7 +708,7 @@ def cont_cont_dwm(
     )
 
     fig_2.update_layout(
-        title_text=f"{pred1} & {pred2} Bin Average",
+        title_text=f"{pred1} & {pred2} Bin Average Residual",
         xaxis=dict(tickmode="array", tickvals=np.around(pred2_edges, 3)),
         yaxis=dict(tickmode="array", tickvals=np.around(pred1_edges, 3)),
     )
@@ -686,7 +723,7 @@ def cont_cont_dwm(
 
 
 # predictor 1 is continous predictor 2 is categorical
-def cont_cat_dwm(df: pd.DataFrame, pred1: str, pred2: str, response: str):  # noqa: E501
+def cont_cat_dwm(df: pd.DataFrame, pred1: str, pred2: str, response: str):
     pred1_edges = np.histogram_bin_edges(df[pred1], bins="sturges")
     # getting values for each category
     categories = df[pred2].unique()
@@ -706,7 +743,7 @@ def cont_cat_dwm(df: pd.DataFrame, pred1: str, pred2: str, response: str):  # no
             temp_bin = df[
                 (df[pred2] == categories[x])
                 & (df[pred1] >= pred1_edges[i])
-                & (df[pred1] > pred1_edges[i + 1])
+                & (df[pred1] < pred1_edges[i + 1])
             ][response]
             all_bin.at[int_encoded[x], pred1_centers[i]] = temp_bin
             bin_count.loc[int_encoded[x], pred1_centers[i]] = len(temp_bin)
@@ -791,8 +828,8 @@ def cont_cat_dwm(df: pd.DataFrame, pred1: str, pred2: str, response: str):  # no
 
 def cat_cat_dwm(df: pd.DataFrame, pred1: str, pred2: str, response: str):
     # getting unique values for each category
-    categories1 = df[pred1].unique().astype("string")
-    categories2 = df[pred2].unique().astype("string")
+    categories1 = df[pred1].unique().astype(str)
+    categories2 = df[pred2].unique().astype(str)
     categories1 = sorted(categories1)
     categories2 = sorted(categories2)
 
@@ -880,6 +917,112 @@ def make_html_link(plot_col: pd.Series):
     regex = ".+/([^/]+).html$"
     for x in range(len(plot_col)):
         text = re.findall(regex, plot_col[x])
-        link_html = f'<a target="_blank" href="{plot_col[x]}">{text[0]}</a>'
+        link_html = (
+            f'<a target="_blank" href="{plot_col[x]}">{text[0]}</a>'  # noqa: E501
+        )
         plot_col[x] = link_html
     return plot_col
+
+
+def logistic_regression(pandas_df, predictor, response):
+    predictor_for_model = statsmodels.api.add_constant(pandas_df[predictor])
+    logistic_regression_model = statsmodels.api.Logit(
+        pandas_df[response], predictor_for_model
+    )
+    logistic_regression_model_fitted = logistic_regression_model.fit()
+
+    # Get the stats
+    t_value = round(logistic_regression_model_fitted.tvalues[1], 6)
+    p_value = "{:.6e}".format(logistic_regression_model_fitted.pvalues[1])
+    return p_value, t_value
+
+
+def cont_dwm(pandas_df, predictor, response):
+    mean, edges, bin_number = stats.binned_statistic(
+        pandas_df[predictor], pandas_df[response], statistic="mean", bins=10
+    )
+    count, edges, bin_number = stats.binned_statistic(
+        pandas_df[predictor], pandas_df[response], statistic="count", bins=10
+    )
+    pop_mean = np.mean(pandas_df[response])
+    edge_centers = (edges[:-1] + edges[1:]) / 2
+    mean_diff = mean - pop_mean
+    mdsq = mean_diff ** 2
+    pop_prop = count / len(pandas_df[response])
+    wmdsq = pop_prop * mdsq
+    msd = np.nansum(mdsq) / 10
+    wmsd = np.sum(wmdsq)
+
+    fig = px.scatter(
+        x=edge_centers,
+        y=mean_diff,
+        color=px.Constant("$\u03BC_{i}$ - $\u03BC_{pop}$"),
+        labels=dict(x="Predictor Bin", y="response"),
+    )
+    fig.add_bar(x=edge_centers, y=count, name="Population")
+    fig.add_shape(
+        type="line",
+        x0=edges[0],
+        y0=pop_mean,
+        x1=edges[-1],
+        y1=pop_mean,
+        name="$\u03BC_{pop}$",
+    )
+
+    filename = f"plots/{predictor}_{response}_dwm.html"
+
+    fig.write_html(
+        file=filename,
+        include_plotlyjs="cdn",
+    )
+
+    return filename, msd, wmsd
+
+
+def cat_dwm(pandas_df, predictor, response):
+    categories = pandas_df[predictor].unique().astype(str)
+    categories = sorted(categories)
+    mini_df = pandas_df[[predictor, response]]
+    mean = mini_df.groupby([predictor]).mean()
+    count = mini_df.groupby([predictor]).count()
+    pop_mean = np.mean(pandas_df[response])
+    mean_diff = mean.values - pop_mean
+    mdsq = mean_diff ** 2
+    pop_prop = count.values / len(pandas_df[response])
+    wmdsq = pop_prop * mdsq
+    msd = np.nansum(mdsq) / 10
+    wmsd = np.nansum(wmdsq)
+
+    fig = px.scatter(
+        x=categories,
+        y=mean_diff.flatten(),
+        color=px.Constant("$\u03BC_{i}$ - $\u03BC_{pop}$"),
+        labels=dict(x="Predictor Bin", y="response"),
+    )
+    fig.add_bar(x=categories, y=count.values, name="Population")
+    fig.add_shape(
+        type="line",
+        x0=categories[0],
+        y0=pop_mean,
+        x1=categories[1],
+        y1=pop_mean,
+        name="$\u03BC_{pop}$",
+    )
+
+    filename = f"plots/{predictor}_{response}_dwm.html"
+
+    fig.write_html(
+        file=filename,
+        include_plotlyjs="cdn",
+    )
+
+    return filename, msd, wmsd
+
+
+def rf_importance(df, predictors, response):
+    df_X = df[predictors]
+    df_y = df[response]
+    clf = RandomForestClassifier(max_depth=2, random_state=0)
+    clf.fit(df_X, df_y)
+    importances = clf.feature_importances_
+    return importances.tolist()
