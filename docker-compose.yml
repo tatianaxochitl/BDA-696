@@ -6,15 +6,32 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile
+    networks:
+      - help
+    depends_on:
+      - maria_db
+    environment:
+      MYSQL_HOST: maria_db
+    links:
+      - maria_db
 
   maria_db:
     image: mariadb
+    container_name: maria_db
     restart: on-failure
-    ports:
-      - 8083:3306
     environment:
       MYSQL_USER: root
       MYSQL_PASSWORD: root # pragma: allowlist secret
       MYSQL_ROOT_PASSWORD: root # pragma: allowlist secret
     volumes:
       - ${PWD}/mariadb:/var/lib/mysql
+    ports:
+      - 8088:3306
+    networks:
+      - help
+
+networks:
+  help:
+
+volumes:
+  mariadb:

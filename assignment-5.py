@@ -29,7 +29,7 @@ from midterm import process_dataframe
 def main():
     db_user = "root"
     db_pass = "root"  # pragma: allowlist secret
-    db_host = "localhost"
+    db_host = "maria_db"
     db_database = "baseball"
     connect_string = f"mariadb+mariadbconnector://{db_user}:{db_pass}@{db_host}/{db_database}"  # pragma: allowlist secret # noqa: E501
 
